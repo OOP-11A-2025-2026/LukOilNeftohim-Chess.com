@@ -1,14 +1,17 @@
 public class Main {
     public static void main(String[] args) {
         Board board = new Board();
-        board.set("Pc3");
-        board.set("Rb1");
-        board.set("Nh1");
-        board.print();
-
-        System.out.println();
-        board.move("c3", "c5");
-        board.move("h1", "g3");
-        board.print();
+        board.loadDefault();
+        try {
+            board.move("a2", "a3");
+            board.move("b7", "b5");
+            board.move("a3", "a4");
+            board.move("b5", "a4");
+            board.move("a1", "a4");
+        } catch (IllegalArgumentException e) {
+            System.out.println(e.getMessage());
+        } finally {
+            board.print();
+        }
     }
 }
