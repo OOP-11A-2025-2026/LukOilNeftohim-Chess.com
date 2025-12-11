@@ -115,13 +115,31 @@ public class Board {
         long pos = 1L << idx;
         long moves = 0L;
         switch (piece) {
-            case 'P' -> moves = pos << 8;
+            case 'P' -> moves = pawnMoves(pos);
             case 'N' -> moves = knightMoves(pos);
             case 'B' -> moves = bishopRays(idx);
             case 'R' -> moves = rookRays(idx);
             case 'Q' -> moves = bishopRays(idx) | rookRays(idx);
             case 'K' -> moves = kingMoves(pos);
         }
+        return moves;
+    }
+
+    private long pawnMoves(long pos) {
+        long occupied = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
+
+        long singlePush = (pos << 8) & ~occupied;
+        long moves = singlePush;
+        long rank2 = 0x000000000000FF00L;
+        long doublePush = (pos & rank2);
+
+        if (doublePush != 0) {
+            long twoUp = (pos << 16) & ~occupied;
+            if (singlePush != 0) {
+                moves |= twoUp;
+            }
+        }
+
         return moves;
     }
 
