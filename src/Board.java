@@ -362,4 +362,8 @@ public class Board {
         set("Pa7"); set("Pb7"); set("Pc7"); set("Pd7"); set("Pe7"); set("Pf7"); set("Pg7"); set("Ph7");
         whiteToMove = true;
     }
+
+    public boolean isWhiteToMove() {
+        return whiteToMove;
+    }
 }

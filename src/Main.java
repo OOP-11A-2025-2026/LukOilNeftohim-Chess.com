@@ -136,7 +136,7 @@ public class Main {
     }
 
     private static void handleResign() {
-        boolean isWhiteToMove = true; // TODO: Get actual turn from board
+        boolean isWhiteToMove = board.isWhiteToMove();
         String loser = isWhiteToMove ? "White" : "Black";
         String winner = isWhiteToMove ? "Black" : "White";
         System.out.println(loser + " resigns. " + winner + " wins!");
