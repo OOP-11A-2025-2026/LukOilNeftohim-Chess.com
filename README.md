@@ -2,12 +2,13 @@
 ## Program Logic
 ### Piece
 
-- enum за черни и бели фигури
+Вид и цвят на фигурата
 
-- enum за вида на фигурата
- ```javascript I'm A tab
-enum Type {
+ ```java
+enum Type { //Вид на фигурата
     PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING;
+enum Color { //Цвят на фигурата
+    WHITE, BLACK;
 ```
 
 - функция toSANChar
@@ -15,7 +16,19 @@ enum Type {
 ### Move
 
 - флагове за:
-- двата вида рокада, ен пасант, повишение на пешка, шах, шах и мат
+ ```java
+    public static final byte FLAG_SHORT_CASTLE=  0b00000001;//двата вида рокада
+    public static final byte FLAG_LONG_CASTLE =  0b00000010;
+    public static final byte FLAG_EN_PASSANT  =  0b00000100;// ен пасант
+    public static final byte FLAG_PROMOTION   =  0b00001000;//повишение на пешка
+    public static final byte FLAG_CHECK       =  0b00010000;//шах
+    public static final byte FLAG_MATE        =  0b00100000;//шах и мат
+
+    public Piece piece;         
+    public byte target;
+    public byte flags;
+    public byte disambiguation; 
+```
 
 - фигурата, която се мести
 
