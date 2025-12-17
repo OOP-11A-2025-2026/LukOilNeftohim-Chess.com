@@ -100,11 +100,8 @@ public class ChessCLI {
                 String from = parts[0].toLowerCase();
                 String to = parts[1].toLowerCase();
 
-                if (isValidSquare(from) && isValidSquare(to)) {
-                    board.move(from, to);
-                } else {
-                    System.out.println("Invalid square notation. Use format: e2 e4");
-                }
+                board.move(from, to);
+                
             } else {
                 System.out.println("Invalid input format. Use: e2 e4 or Nf3");
             }
@@ -114,13 +111,6 @@ public class ChessCLI {
 
         System.out.print("Press Enter to continue...");
         scanner.nextLine();
-    }
-
-    private static boolean isValidSquare(String square) {
-        if (square.length() != 2) return false;
-        char file = square.charAt(0);
-        char rank = square.charAt(1);
-        return file >= 'a' && file <= 'h' && rank >= '1' && rank <= '8';
     }
 
     private static void handleResign() {
@@ -212,5 +202,4 @@ public class ChessCLI {
             case PAWN   -> piece.color() == Color.WHITE ? "♙" : "♟";
         };
     }
-    
 }
