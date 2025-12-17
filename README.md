@@ -19,7 +19,8 @@
 
 ---
 
-> [!IMPORTANT] Изисквания
+> [!IMPORTANT]
+> Изисквания
 > 
 > - Java 17 или по-нова
 > - 24-bit ANSI терминален емулатор (например Alacritty, Windows Terminal, iTerm2)
