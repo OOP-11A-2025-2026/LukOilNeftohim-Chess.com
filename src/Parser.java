@@ -197,7 +197,7 @@ public class Parser {
             }
         }
 
-        move.target = convertPosToByte(token.charAt(0), token.charAt(1));
+        move.target = (byte) ( (token.charAt(1) - '1') * 8 + (token.charAt(0) - 'a') );
 
         return move;
     }
