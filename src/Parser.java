@@ -49,7 +49,8 @@ public class Parser {
      *   Event, Site, Date, Result, White, Black, TimeControl, ECO...
      */
     private Map<String, String> parseTags(String text) {
-        return null;
+        return null;    
+        
     }
 
     /**

@@ -1,22 +1,19 @@
 import java.util.Scanner;
 
-public class Main {
+public class ChessCLI {
     private static Board board;
     private static Scanner scanner;
     private static boolean gameActive;
 
-    // ANSI Color codes
     private static final String RESET = "\033[0m";
     private static final String WHITE_BG = "\033[47m";
     private static final String BLACK_BG = "\033[40m";
-    private static final String WHITE_PIECE = "\033[97m"; // Bright white
-    private static final String BLACK_PIECE = "\033[30m"; // Black
-    private static final String HIGHLIGHT = "\033[43m"; // Yellow background
+    private static final String WHITE_PIECE = "\033[97m";
+    private static final String BLACK_PIECE = "\033[30m"; 
 
-    // Unicode pieces
     private static final String[] UNICODE_PIECES = {
-            "♔", "♕", "♖", "♗", "♘", "♙", // White pieces
-            "♚", "♛", "♜", "♝", "♞", "♟"  // Black pieces
+            "♔", "♕", "♖", "♗", "♘", "♙",
+            "♚", "♛", "♜", "♝", "♞", "♟"
     };
 
     public static void main(String[] args) {
@@ -25,21 +22,15 @@ public class Main {
 
         while (true) {
             showMainMenu();
-            int choice = getUserChoice();
-
-            switch (choice) {
-                case 1:
-                    startNewGame();
-                    break;
-                case 2:
-                    loadGame();
-                    break;
-                case 3:
-                    System.out.println("Goodbye!");
+    
+            switch (getUserChoice()) {
+                case 1 -> startNewGame();
+                case 2 -> loadGame();
+                case 3 -> 
+                    {System.out.println("Goodbye!");
                     scanner.close();
-                    return;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
+                    return;}
+                default -> System.out.println("Invalid choice. Please try again.");
             }
         }
     }
@@ -58,7 +49,6 @@ public class Main {
 
     private static void startNewGame() {
         board = new Board();
-        board.loadDefault();
         gameActive = true;
         playGame();
     }
@@ -66,7 +56,7 @@ public class Main {
     private static void loadGame() {
         System.out.print("Enter PGN file name: ");
         String fileName = scanner.nextLine().trim();
-        // TODO: Implement PGN loading
+        // TODO: Integrate PGN loading
         System.out.println("PGN loading not yet implemented.");
         System.out.print("Press Enter to continue...");
         scanner.nextLine();
@@ -77,8 +67,8 @@ public class Main {
             clearScreen();
             printColoredBoard();
 
-            String currentPlayer = getCurrentPlayer();
-            System.out.println("\n" + currentPlayer + "'s turn");
+            String sideToMove = board.sideToMove == Color.WHITE ? "White" : "Black";
+            System.out.println("\n" + sideToMove == Color.WHITE + "'s turn");
             System.out.println("Options: [move] [resign] [draw] [help]");
             System.out.print("Enter move: ");
             String input = scanner.nextLine().trim();
@@ -99,16 +89,14 @@ public class Main {
 
     private static void processMove(String input) {
         try {
-            // Parse algebraic notation or coordinate notation
             String[] parts = input.split("\\s+");
 
             if (parts.length == 1) {
-                // Try algebraic notation: Nf3, e4, etc.
                 // TODO: Implement algebraic notation parser
+
                 System.out.println("Algebraic notation not yet fully implemented.");
                 System.out.println("Please use coordinate notation: e2 e4");
             } else if (parts.length == 2) {
-                // Coordinate notation: e2 e4
                 String from = parts[0].toLowerCase();
                 String to = parts[1].toLowerCase();
 
@@ -136,9 +124,8 @@ public class Main {
     }
 
     private static void handleResign() {
-        boolean isWhiteToMove = board.isWhiteToMove();
-        String loser = isWhiteToMove ? "White" : "Black";
-        String winner = isWhiteToMove ? "Black" : "White";
+        String loser = board.sideToMove == Color.WHITE ? "White" : "Black";
+        String winner = board.sideToMove == Color.WHITE ? "Black" : "White";
         System.out.println(loser + " resigns. " + winner + " wins!");
         gameActive = false;
     }
@@ -146,7 +133,7 @@ public class Main {
     private static void handleDraw() {
         System.out.print("Propose a draw? (y/n): ");
         String response = scanner.nextLine().trim().toLowerCase();
-        if (response.equals("y")) {
+        if (response.toLowerCase().charAt(0) == 'y') {
             System.out.println("The game ended in a draw.");
             gameActive = false;
         }
@@ -181,8 +168,8 @@ public class Main {
         }
     }
 
-    private static void clearScreen() {
-        // Clear screen for better UX (works on most terminals)
+    private static void clearScreen() 
+    {
         System.out.print("\033[H\033[2J");
         System.out.flush();
     }
@@ -197,11 +184,11 @@ public class Main {
                 boolean isLightSquare = (rank + file) % 2 == 0;
                 String bgColor = isLightSquare ? WHITE_BG : BLACK_BG;
                 
-                char piece = getPieceCharAtSquare(file, rank);
-                String pieceDisplay = getPieceUnicode(piece);
-                String pieceColor = Character.isUpperCase(piece) ? WHITE_PIECE : BLACK_PIECE;
+                Piece piece = board.getPieceAt(rank*8 + file); 
+                String pieceType = getPieceUnicode(piece);
+                String pieceColor = (piece != null && piece.color() == Color.WHITE) ? WHITE_PIECE : BLACK_PIECE;
                 
-                System.out.print(bgColor + pieceColor + " " + pieceDisplay + " " + RESET);
+                System.out.print(bgColor + pieceColor + " " + pieceType + " " + RESET);
             }
             
             System.out.println(" " + (rank + 1));
@@ -209,52 +196,21 @@ public class Main {
         
         System.out.println("   a  b  c  d  e  f  g  h\n");
         
-        // Display game status
-        String currentPlayer = getCurrentPlayer();
-        System.out.println("Current Player: " + currentPlayer);
+        String sideToMove = board.sideToMove == Color.WHITE ? "White" : "Black";
+        System.out.println("Current Player: " + sideToMove);
     }
 
-    private static char getPieceCharAtSquare(int file, int rank) {
-        char fileLetter = (char) ('a' + file);
-        char rankNumber = (char) ('1' + rank);
-        String square = "" + fileLetter + rankNumber;
-        
-        // Access board's getPieceAt through reflection or add public method to Board
-        try {
-            java.lang.reflect.Method method = Board.class.getDeclaredMethod("getPieceAt", String.class);
-            method.setAccessible(true);
-            return (char) method.invoke(board, square);
-        } catch (Exception e) {
-            return '.';
-        }
-    }
-
-    private static String getPieceUnicode(char piece) {
-        return switch (piece) {
-            case 'K' -> "♔";
-            case 'Q' -> "♕";
-            case 'R' -> "♖";
-            case 'B' -> "♗";
-            case 'N' -> "♘";
-            case 'P' -> "♙";
-            case 'k' -> "♚";
-            case 'q' -> "♛";
-            case 'r' -> "♜";
-            case 'b' -> "♝";
-            case 'n' -> "♞";
-            case 'p' -> "♟";
-            default -> "·";
+    private static String getPieceUnicode(Piece piece) {
+        if (piece == null) return " ";
+    
+        return switch (piece.type()) {
+            case KING   -> piece.color() == Color.WHITE ? "♔" : "♚";
+            case QUEEN  -> piece.color() == Color.WHITE ? "♕" : "♛";
+            case ROOK   -> piece.color() == Color.WHITE ? "♖" : "♜";
+            case BISHOP -> piece.color() == Color.WHITE ? "♗" : "♝";
+            case KNIGHT -> piece.color() == Color.WHITE ? "♘" : "♞";
+            case PAWN   -> piece.color() == Color.WHITE ? "♙" : "♟";
         };
     }
-
-    private static String getCurrentPlayer() {
-        try {
-            java.lang.reflect.Field field = Board.class.getDeclaredField("whiteToMove");
-            field.setAccessible(true);
-            boolean whiteToMove = field.getBoolean(board);
-            return whiteToMove ? "⚪ White" : "⚫ Black";
-        } catch (Exception e) {
-            return "Unknown";
-        }
-    }
+    
 }
