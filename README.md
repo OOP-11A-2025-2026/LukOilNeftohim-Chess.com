@@ -15,7 +15,6 @@ enum Color { //Цвят на фигурата
 
 ### Move
 
-- флагове за:
  ```java
     public static final byte FLAG_SHORT_CASTLE=  0b00000001;//двата вида рокада
     public static final byte FLAG_LONG_CASTLE =  0b00000010;
