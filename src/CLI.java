@@ -1,7 +1,8 @@
 import java.util.Scanner;
+
 import model.*;
 import io.Storage;
-import io.Parser;
+
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
 
@@ -55,9 +56,8 @@ public class CLI {
         
         // Choose time control
         timer = selectTimeControl();
-        if (timer != null) {
-            timer.startTimer(Color.WHITE);
-        }
+        if (timer != null) timer.startTimer(Color.WHITE);
+        
 
         gameActive = true;
         playGame();
@@ -70,13 +70,15 @@ public class CLI {
         System.out.println("╚═══════════════════════════════════════╝");
         System.out.print("Enter PGN file name: ");
         String fileName = scanner.nextLine().trim();
-        
+    
         try {
-            // Зареждаме играта от PGN файл
             game = Storage.readGame(fileName);
-
-            board = game.getBoard();
-            
+            board = new Board(); 
+    
+            for (Move m : game.getMoves()) {
+                board.resolveAndMakeMove(m);
+            }
+    
             System.out.println("\n✓ Game loaded successfully!");
             System.out.println("Event: " + game.getTags().getOrDefault("Event", "Unknown"));
             System.out.println("White: " + game.getTags().getOrDefault("White", "Unknown"));
@@ -84,11 +86,10 @@ public class CLI {
             System.out.println("Moves loaded: " + game.getMoves().size());
             System.out.print("\nPress Enter to continue...");
             scanner.nextLine();
-            
-            for(Move m : game.getMoves()) {board.makeMove(m);}
-
+    
             gameActive = true;
             playGame();
+    
         } catch (Exception e) {
             System.out.println(Ansi.ansi().fg(Ansi.Color.RED)
                 .a("\n✗ Error loading game: " + e.getMessage()).reset());
@@ -104,7 +105,6 @@ public class CLI {
             clearScreen();
             printColoredBoard();
 
-            // Показваме грешка ако има
             if (errorMessage != null) {
                 System.out.println(Ansi.ansi().fg(Ansi.Color.RED).a("✗ " + errorMessage).reset());
                 errorMessage = null;
@@ -186,9 +186,8 @@ public class CLI {
         game.getTags().put("Result", result);
         
         // Stop timer
-        if (timer != null) {
-            timer.shutdown();
-        }
+        if (timer != null) timer.shutdown();
+        
         
         gameActive = false;
         scanner.nextLine();
@@ -198,11 +197,8 @@ public class CLI {
         System.out.println("The game ended in a draw.");
         game.getTags().put("Result", "1/2-1/2");
         
-        // Stop timer
-        if (timer != null) {
-            timer.shutdown();
-        }
-        
+        if (timer != null) timer.shutdown();
+
         gameActive = false;
     }
     
@@ -219,8 +215,6 @@ public class CLI {
         }
         
         try {                        
-            // Конвертираме историята на ходовете към Move обекти
-            // За сега просто записваме таговете и ходовете като String
             Storage.writeGame(fileName, game);
             
             System.out.println(Ansi.ansi().fg(Ansi.Color.GREEN)
@@ -283,9 +277,8 @@ public class CLI {
     private static void printColoredBoard() {
         System.out.println();
         System.out.print("Black captured: ");
-        if (board.capturedByBlack.isEmpty()) {
-            System.out.println("—");
-        } else {
+        if (board.capturedByBlack.isEmpty()) System.out.println("—");
+        else {
             for (Piece p : board.capturedByBlack) {
                 System.out.print(Ansi.ansi().fg(Ansi.Color.WHITE).bold().a(getPieceUnicode(p) + " ").reset());
             }
@@ -300,14 +293,12 @@ public class CLI {
                 int square = rank * 8 + file;
                 boolean isLightSquare = (rank + file) % 2 == 0;
                 
-                // Highlighting за последния ход
                 boolean isFromSquare = square == board.lastMoveFrom;
                 boolean isToSquare = square == board.lastMoveTo;
                 
                 int r, g, b;
                 
                 if (isFromSquare || isToSquare) {
-                    // Жълто-зелен highlight за последния ход
                     r = 180;
                     g = 180;
                     b = 80;
@@ -332,12 +323,10 @@ public class CLI {
 
         System.out.println("   a  b  c  d  e  f  g  h");
         
-        // Показваме взетите фигури от белия играч (взети от черния)
         System.out.println();
         System.out.print("White captured: ");
-        if (board.capturedByWhite.isEmpty()) {
-            System.out.println("—");
-        } else {
+        if (board.capturedByWhite.isEmpty()) System.out.println("—");
+        else {
             for (Piece p : board.capturedByWhite) {
                 System.out.print(Ansi.ansi().fg(Ansi.Color.BLACK).bold().a(getPieceUnicode(p) + " ").reset());
             }
@@ -357,6 +346,9 @@ public class CLI {
             case PAWN -> "♟";
         };
     }
+
+
+
     
     private static Timer selectTimeControl() {
         clearScreen();

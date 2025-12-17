@@ -1,9 +1,6 @@
 package model;
 
-/**
- * Timer for chess game with real-time ticking
- * Tracks remaining time for each player with background thread
- */
+
 public class Timer {
     private long whiteTimeMs;
     private long blackTimeMs;
@@ -16,11 +13,7 @@ public class Timer {
     private Thread tickThread;
     private volatile boolean stopTicking = false;
     
-    /**
-     * Create a timer with initial time and optional increment
-     * @param initialTimeMs initial time in milliseconds for each player
-     * @param incrementMs increment in milliseconds per move
-     */
+    
     public Timer(long initialTimeMs, long incrementMs) {
         this.whiteTimeMs = initialTimeMs;
         this.blackTimeMs = initialTimeMs;
@@ -30,9 +23,7 @@ public class Timer {
         this.activePlayer = Color.WHITE;
     }
     
-    /**
-     * Create a timer with different increments for each side
-     */
+    
     public Timer(long initialTimeMs, long whiteIncrementMs, long blackIncrementMs) {
         this.whiteTimeMs = initialTimeMs;
         this.blackTimeMs = initialTimeMs;
@@ -42,10 +33,7 @@ public class Timer {
         this.activePlayer = Color.WHITE;
     }
     
-    /**
-     * Start the timer for a player's turn
-     * Starts a background thread that decrements time in real-time
-     */
+    
     public synchronized void startTimer(Color sideToMove) {
         this.activePlayer = sideToMove;
         this.lastTickTime = System.currentTimeMillis();
@@ -60,9 +48,7 @@ public class Timer {
         }
     }
     
-    /**
-     * Background thread that decrements time in real-time
-     */
+    
     private void tickClock() {
         while (!stopTicking) {
             if (timerRunning) {
@@ -92,10 +78,7 @@ public class Timer {
         }
     }
     
-    /**
-     * Stop the timer and switch to the other player
-     * Should be called after each move
-     */
+    
     public synchronized void stopTimer() {
         if (!timerRunning) return;
         
@@ -113,23 +96,17 @@ public class Timer {
         timerRunning = false;
     }
     
-    /**
-     * Switch to the other player's turn
-     */
+    
     public synchronized void switchPlayer() {
         activePlayer = activePlayer == Color.WHITE ? Color.BLACK : Color.WHITE;
     }
     
-    /**
-     * Get remaining time for a player in milliseconds
-     */
+    
     public synchronized long getRemainingTimeMs(Color color) {
         return color == Color.WHITE ? whiteTimeMs : blackTimeMs;
     }
     
-    /**
-     * Get remaining time formatted as MM:SS or MM:SS.D
-     */
+    
     public synchronized String getFormattedTime(Color color) {
         long timeMs = getRemainingTimeMs(color);
         if (timeMs < 0) timeMs = 0;
@@ -146,16 +123,12 @@ public class Timer {
         }
     }
     
-    /**
-     * Check if a player has run out of time
-     */
+    
     public synchronized boolean isTimeOut(Color color) {
         return getRemainingTimeMs(color) <= 0;
     }
     
-    /**
-     * Reset the timer
-     */
+    
     public synchronized void reset(long initialTimeMs) {
         this.whiteTimeMs = initialTimeMs;
         this.blackTimeMs = initialTimeMs;
@@ -163,30 +136,22 @@ public class Timer {
         stopTicking = true;
     }
     
-    /**
-     * Pause the timer
-     */
+    
     public synchronized void pause() {
         timerRunning = false;
     }
     
-    /**
-     * Resume the timer
-     */
+    
     public synchronized void resume(Color sideToMove) {
         startTimer(sideToMove);
     }
     
-    /**
-     * Get total time remaining for both players
-     */
+    
     public synchronized long getTotalTimeMs() {
         return whiteTimeMs + blackTimeMs;
     }
     
-    /**
-     * Stop the timer thread cleanly
-     */
+    
     public synchronized void shutdown() {
         stopTicking = true;
         timerRunning = false;

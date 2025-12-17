@@ -20,9 +20,6 @@ public class Parser {
         return game;
     }
 
-    /**
-     * Парсва единичен ход от SAN нотация
-     */
     public Move parseSingleMove(String token, Color color) {
         token = token.trim();
         if (token.isEmpty()) {
@@ -30,11 +27,7 @@ public class Parser {
         }
         return parseMove(token, color);
     }
-
-    /* =========================
-       Tags
-       ========================= */
-
+    
     private Map<String, String> parseTags(String text) {
         Map<String, String> tags = new HashMap<>();
 
@@ -48,9 +41,7 @@ public class Parser {
         return tags;
     }
 
-    /* =========================
-       Moves block
-       ========================= */
+    
 
     private List<Move> parseMoves(String text) {
         List<Move> moves = new ArrayList<>();
@@ -72,10 +63,6 @@ public class Parser {
         return moves;
     }
 
-    /* =========================
-       Move controller
-       ========================= */
-
     private Move parseMove(String token, Color color) {
         Move move = new Move();
         move.disambiguation = -1;
@@ -94,10 +81,6 @@ public class Parser {
 
         return move;
     }
-
-    /* =========================
-       Helpers
-       ========================= */
 
     private boolean isResult(String token) {
         return token.equals("1-0") || token.equals("0-1") || token.equals("1/2-1/2") || token.equals("*");
@@ -118,10 +101,6 @@ public class Parser {
             }
         }
     }
-
-    /* =========================
-       SAN parts (back → front)
-       ========================= */
 
     private String parseCheckOrMate(Move move, String token) {
         if (token.isEmpty()) return token;
@@ -209,10 +188,6 @@ public class Parser {
         return token;
     }
 
-    /* =========================
-       Piece (front only)
-       ========================= */
-
     private void parsePiece(Move move, String token, Color color) {
         char first = token.isEmpty() ? ' ' : token.charAt(0);
 
@@ -225,11 +200,7 @@ public class Parser {
             default -> Type.PAWN;
         };
 
-        // Ако вече има piece (от promotion), запази цвета
-        if (move.piece == null) {
-            move.piece = new Piece(type, color);
-        } else {
-            move.piece = new Piece(type, move.piece.color());
-        }
+        if (move.piece == null) move.piece = new Piece(type, color);
+        else move.piece = new Piece(type, move.piece.color());
     }
 }

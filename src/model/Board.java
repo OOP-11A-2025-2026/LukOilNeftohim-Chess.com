@@ -16,24 +16,18 @@ public class Board {
 
     private int enPassantSquare = -1;
     private boolean wkCastle = true, wqCastle = true, bkCastle = true, bqCastle = true;
-    
+
     public int lastMoveFrom = -1;
     public int lastMoveTo = -1;
-    
-    // История на позициите за undo
+
     private Stack<BoardState> history = new Stack<>();
-    
-    // Взети фигури
+
     public List<Piece> capturedByWhite = new ArrayList<>();
     public List<Piece> capturedByBlack = new ArrayList<>();
 
     public Board() {
         setupInitialPosition();
     }
-
-    /* =========================
-       Setup
-       ========================= */
 
     private void setupInitialPosition() {
         bb[WP] = 0x000000000000FF00L;
@@ -50,13 +44,6 @@ public class Board {
         bb[BK] = 0x1000000000000000L;
     }
 
-    /* =========================
-       UNDO
-       ========================= */
-
-    /**
-     * Запазва текущата позиция в историята
-     */
     private void saveState() {
         BoardState state = new BoardState();
         state.bb = bb.clone();
@@ -73,17 +60,15 @@ public class Board {
         history.push(state);
     }
 
-    /**
-     * Връща позицията на предишния ход
-     */
+    
     public boolean undo() {
-        if (history.isEmpty()) {
-            return false;
-        }
-        
+        if (history.isEmpty()) return false;
+
         BoardState state = history.pop();
+
         System.arraycopy(state.bb, 0, bb, 0, 12);
         sideToMove = state.sideToMove;
+        
         enPassantSquare = state.enPassantSquare;
         wkCastle = state.wkCastle;
         wqCastle = state.wqCastle;
@@ -93,20 +78,11 @@ public class Board {
         lastMoveTo = state.lastMoveTo;
         capturedByWhite = state.capturedByWhite;
         capturedByBlack = state.capturedByBlack;
-        
+
         return true;
     }
 
-    /**
-     * Проверява дали има ходове за undo
-     */
-    public boolean canUndo() {
-        return !history.isEmpty();
-    }
-
-    /* =========================
-       Square helpers
-       ========================= */
+    public boolean canUndo() { return !history.isEmpty(); }
 
     public int sqIdx(String sq) {
         char file = sq.charAt(0);
@@ -114,43 +90,39 @@ public class Board {
         return (rank - '1') * 8 + (file - 'a');
     }
 
-    /* =========================
-       Occupancy
-       ========================= */
-
     private long whiteOcc() {
         long o = 0L;
         for (int i = 0; i < 6; i++) o |= bb[i];
+        
         return o;
     }
 
     private long blackOcc() {
         long o = 0L;
         for (int i = 6; i < 12; i++) o |= bb[i];
+        
         return o;
     }
 
-    private long allOcc() {
-        return whiteOcc() | blackOcc();
-    }
+    private long allOcc() { return whiteOcc() | blackOcc(); }
 
     private int pieceIndexAt(int square) {
         long mask = 1L << square;
-        for (int i = 0; i < 12; i++) {
-            if ((bb[i] & mask) != 0) return i;
-        }
+        for (int i = 0; i < 12; i++) 
+            if ((bb[i] & mask) != 0)
+                return i;
+        
         return -1;
     }
 
     public Piece getPieceAt(int idx) {
         int p = pieceIndexAt(idx);
         if (p == -1) return null;
+        
         return new Piece(Type.values()[p % 6], p < 6 ? Color.WHITE : Color.BLACK);
     }
 
-    /* =========================
-       Move generation helpers
-       ========================= */
+    
 
     private int getPieceIndex(Type type, Color color) {
         return type.ordinal() + (color == Color.WHITE ? 0 : 6);
@@ -170,14 +142,12 @@ public class Board {
             case BISHOP -> generateBishopMoves(from, occ) & ~friendly;
             case ROOK -> generateRookMoves(from, occ) & ~friendly;
             case QUEEN -> (generateBishopMoves(from, occ)
-                         | generateRookMoves(from, occ)) & ~friendly;
+                    | generateRookMoves(from, occ)) & ~friendly;
             case KING -> generateKingMoves(from) & ~friendly;
         };
     }
 
-    /* =========================
-       Piece move generators
-       ========================= */
+    
 
     private long generatePawnMoves(int from, Color color) {
         long moves = 0;
@@ -191,15 +161,16 @@ public class Board {
             moves |= 1L << fwd;
             if ((color == Color.WHITE && rank == 1) || (color == Color.BLACK && rank == 6)) {
                 int dbl = from + 2 * dir;
-                if ((occ & (1L << dbl)) == 0) moves |= 1L << dbl;
+                if ((occ & (1L << dbl)) == 0)
+                    moves |= 1L << dbl;
             }
         }
 
-        for (int off : color == Color.WHITE ? new int[]{7,9} : new int[]{-7,-9}) {
+        for (int off : color == Color.WHITE ? new int[] { 7, 9 } : new int[] { -7, -9 }) {
             int to = from + off;
             if (to >= 0 && to < 64 &&
-                Math.abs((to % 8) - (from % 8)) == 1 &&
-                (((enemy | (1L << enPassantSquare)) & (1L << to)) != 0)) {
+                    Math.abs((to % 8) - (from % 8)) == 1 &&
+                    (((enemy | (1L << enPassantSquare)) & (1L << to)) != 0)) {
                 moves |= 1L << to;
             }
         }
@@ -209,7 +180,7 @@ public class Board {
 
     private long generateKnightMoves(int from) {
         long m = 0;
-        int[] o = {-17,-15,-10,-6,6,10,15,17};
+        int[] o = { -17, -15, -10, -6, 6, 10, 15, 17 };
         for (int d : o) {
             int t = from + d;
             if (t >= 0 && t < 64 && Math.abs((from % 8) - (t % 8)) <= 2)
@@ -219,16 +190,16 @@ public class Board {
     }
 
     private long generateBishopMoves(int from, long occ) {
-        return slidingMoves(from, occ, new int[]{-9,-7,7,9});
+        return slidingMoves(from, occ, new int[] { -9, -7, 7, 9 });
     }
 
     private long generateRookMoves(int from, long occ) {
-        return slidingMoves(from, occ, new int[]{-8,-1,1,8});
+        return slidingMoves(from, occ, new int[] { -8, -1, 1, 8 });
     }
 
     private long generateKingMoves(int from) {
         long m = 0;
-        int[] o = {-9,-8,-7,-1,1,7,8,9};
+        int[] o = { -9, -8, -7, -1, 1, 7, 8, 9 };
         for (int d : o) {
             int t = from + d;
             if (t >= 0 && t < 64 && Math.abs((from % 8) - (t % 8)) <= 1)
@@ -242,50 +213,45 @@ public class Board {
         for (int d : dirs) {
             int t = from + d;
             while (t >= 0 && t < 64 &&
-                   Math.abs((t % 8) - (from % 8)) <= 2) {
+                    Math.abs((t % 8) - (from % 8)) <= 2) {
                 m |= 1L << t;
-                if ((occ & (1L << t)) != 0) break;
+                if ((occ & (1L << t)) != 0)
+                    break;
                 t += d;
             }
         }
         return m;
     }
 
-    /* =========================
-       SAN MOVE HANDLING (NEW)
-       ========================= */
+    
 
-    /**
-     * Приема SAN нотация (e4, Nf3, O-O) или координатна (e2 e4)
-     */
+    
     public void move(String input) throws IllegalMoveException {
         input = input.trim();
-        
+
         // Проверка за координатна нотация (e2 e4)
         if (input.matches("[a-h][1-8]\\s+[a-h][1-8]")) {
             String[] parts = input.split("\\s+");
             move(parts[0], parts[1]);
             return;
         }
-        
+
         // SAN нотация
         Parser parser = new Parser();
         Move move = parser.parseSingleMove(input, sideToMove);
         resolveAndMakeMove(move);
     }
 
-    /**
-     * Координатно местене
-     */
+    
     public void move(String from, String to) throws IllegalMoveException {
         saveState(); // Запазваме състоянието преди хода
-        
+
         int fromIdx = sqIdx(from);
         int toIdx = sqIdx(to);
-        
+
         lastMoveFrom = fromIdx;
         lastMoveTo = toIdx;
-        
+
         Piece piece = getPieceAt(fromIdx);
         if (piece == null) {
             throw new IllegalMoveException("No piece at " + from);
@@ -293,16 +259,16 @@ public class Board {
         if (piece.color() != sideToMove) {
             throw new IllegalMoveException("Not your piece");
         }
-        
+
         if (!canMoveTo(fromIdx, toIdx, piece.type())) {
             throw new IllegalMoveException("Illegal move");
         }
-        
+
         Move move = new Move();
         move.piece = piece;
         move.target = (byte) toIdx;
         move.disambiguation = fromIdx;
-        
+
         // Проверка за специални ходове
         if (piece.type() == Type.PAWN) {
             int targetRank = toIdx / 8;
@@ -313,19 +279,17 @@ public class Board {
                 move.flags |= Move.FLAG_EN_PASSANT;
             }
         }
-        
+
         makeMove(move);
     }
 
-    /**
-     * Разрешава SAN хода до конкретна позиция
-     */
-    private void resolveAndMakeMove(Move move) throws IllegalMoveException {
+    
+    public void resolveAndMakeMove(Move move) throws IllegalMoveException {
         saveState(); // Запазваме състоянието преди хода
-        
+
         // Рокада
-        if ((move.flags & Move.FLAG_SHORT_CASTLE) != 0 || 
-            (move.flags & Move.FLAG_LONG_CASTLE) != 0) {
+        if ((move.flags & Move.FLAG_SHORT_CASTLE) != 0 ||
+                (move.flags & Move.FLAG_LONG_CASTLE) != 0) {
             // За рокада, запомняме позициите
             if (sideToMove == Color.WHITE) {
                 lastMoveFrom = 4; // e1
@@ -341,10 +305,10 @@ public class Board {
         int target = move.target & 0xFF;
         Type pieceType = move.piece.type();
         int pieceIdx = getPieceIndex(pieceType, sideToMove);
-        
+
         List<Integer> candidates = new ArrayList<>();
         long pieceBitboard = bb[pieceIdx];
-        
+
         // Намери всички фигури от този тип
         for (int sq = 0; sq < 64; sq++) {
             if ((pieceBitboard & (1L << sq)) != 0) {
@@ -353,11 +317,11 @@ public class Board {
                 }
             }
         }
-        
+
         if (candidates.isEmpty()) {
             throw new IllegalMoveException("No piece can reach " + squareToString(target));
         }
-        
+
         // Филтрирай по disambiguation
         if (move.disambiguation >= 0 && move.disambiguation < 8) {
             // File disambiguation (a-h)
@@ -368,28 +332,26 @@ public class Board {
             int rank = move.disambiguation - 8;
             candidates.removeIf(sq -> sq / 8 != rank);
         }
-        
+
         if (candidates.size() != 1) {
             throw new IllegalMoveException("Ambiguous move");
         }
-        
+
         int fromSquare = candidates.get(0);
         move.disambiguation = fromSquare;
-        
+
         // Запомняме позициите
         lastMoveFrom = fromSquare;
         lastMoveTo = target;
-        
+
         makeMove(move);
     }
 
     private String squareToString(int sq) {
-        return "" + (char)('a' + sq % 8) + (char)('1' + sq / 8);
+        return "" + (char) ('a' + sq % 8) + (char) ('1' + sq / 8);
     }
 
-    /* =========================
-       APPLY MOVE (CORE)
-       ========================= */
+    
 
     public void makeMove(Move move) {
         int from = move.disambiguation;
@@ -468,9 +430,7 @@ public class Board {
         }
     }
 
-    /* =========================
-       Debug
-       ========================= */
+    
 
     public void display() {
         for (int r = 7; r >= 0; r--) {
@@ -481,16 +441,14 @@ public class Board {
             System.out.println();
         }
     }
-    
+
     public class IllegalMoveException extends Exception {
         public IllegalMoveException(String message) {
             super(message);
         }
     }
+
     
-    /**
-     * Клас за запазване на състоянието на борда
-     */
     private static class BoardState {
         long[] bb;
         Color sideToMove;

@@ -27,19 +27,12 @@ public class Storage {
         sb.append("\n");
 
         int moveNo = 1;
-        for (int i = 0; i < game.getMoves().size(); i++) {
-            if (i % 2 == 0) {
-                sb.append(moveNo++).append(". ");
-            }
-            // sb.append(game.getMoves().get(i).toSAN()).append(" ");
-        }
+        for (int i = 0; i < game.getMoves().size(); i++) 
+            if (i % 2 == 0) sb.append(moveNo++).append(". ");
+        
 
         writePGN(fileName, sb.toString().trim());
     }
-
-    /* =========================
-       IO helpers
-       ========================= */
 
     private static String readPGN(String fileName) {
         StringBuilder sb = new StringBuilder();
