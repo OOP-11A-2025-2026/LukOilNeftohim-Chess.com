@@ -1,6 +1,6 @@
 # LukOilNeftohim-Chess.com
-##Program Logic
-###Piece
+## Program Logic
+### Piece
 
 Съдържа:
 
@@ -10,7 +10,7 @@ enum за вида на фигурата
 
 функция toSANChar
 
-###Move
+### Move
 
 Съдържа:
 
@@ -23,7 +23,7 @@ enum за вида на фигурата
 
 byte disambiguation
 
-###Game
+### Game
 
 Създава самата игра и съдържа:
 
@@ -33,6 +33,6 @@ board
 
 tags
 
-###Storage
+### Storage
 
 Клас за писане и четене във файл.
