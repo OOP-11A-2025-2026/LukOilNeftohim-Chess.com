@@ -129,9 +129,7 @@ public class CLI {
                 }
             }
             
-            // Prompt in the color of the player
-            Ansi.Color promptColor = game.getBoard().sideToMove == Color.WHITE ? Ansi.Color.WHITE : Ansi.Color.BLACK;
-            System.out.print(Ansi.ansi().fg(promptColor).bold().a("Enter move: ").reset());
+            System.out.print(Ansi.ansi.bold().a(game.getBoard().sideToMove == Color.WHITE ? "White's turn: " : "Black's turn: ").reset())
             
             String input = scanner.nextLine().trim();
 
