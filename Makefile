@@ -13,7 +13,7 @@ JAVAC := javac
 JFLAGS := -d $(OUT_DIR) -cp "$(LIB_DIR)/*"
 
 # Главен клас за стартиране
-MAIN_CLASS := ChessCLI
+MAIN_CLASS := CLI
 
 # Default target
 all: compile run

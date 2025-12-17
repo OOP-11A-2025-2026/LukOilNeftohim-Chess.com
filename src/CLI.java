@@ -3,7 +3,7 @@ import model.*;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
 
-public class ChessCLI {
+public class CLI {
     private static Board board;
     private static Scanner scanner;
     private static boolean gameActive;
@@ -12,7 +12,7 @@ public class ChessCLI {
     static Ansi.Color blackPiece = Ansi.Color.BLACK; 
 
     public static void main(String[] args) {
-        AnsiConsole.systemInstall(); // Стартира Jansi
+        AnsiConsole.systemInstall();
         scanner = new Scanner(System.in);
         gameActive = false;
 
@@ -25,7 +25,7 @@ public class ChessCLI {
                 case 3 -> {
                     System.out.println("Goodbye!");
                     scanner.close();
-                    AnsiConsole.systemUninstall(); // Спира Jansi
+                    AnsiConsole.systemUninstall();
                     return;
                 }
                 default -> System.out.println("Invalid choice. Please try again.");
@@ -60,14 +60,22 @@ public class ChessCLI {
     }
 
     private static void playGame() {
+        String errorMessage = null;
+        
         while (gameActive) {
             clearScreen();
             printColoredBoard();
 
-            String sideToMove = board.sideToMove == Color.WHITE ? "White" : "Black";
-            System.out.println("\n" + sideToMove + "'s turn");
-            System.out.println("Options: [move] [resign] [draw] [help]");
-            System.out.print("Enter move: ");
+            // Показваме грешка ако има
+            if (errorMessage != null) {
+                System.out.println(Ansi.ansi().fg(Ansi.Color.RED).a("✗ " + errorMessage).reset());
+                errorMessage = null;
+            }
+            
+            System.out.println();
+
+            System.out.print(board.sideToMove == Color.WHITE ? "White's turn: " : "Black's turn: ");
+            
             String input = scanner.nextLine().trim();
 
             if (input.equalsIgnoreCase("resign")) {
@@ -75,39 +83,30 @@ public class ChessCLI {
                 break;
             } else if (input.equalsIgnoreCase("draw")) {
                 handleDraw();
-                break;
+                if (!gameActive) break;
+            } else if (input.equalsIgnoreCase("undo")) {
+                if (board.canUndo()) {
+                    board.undo();
+                } else {
+                    errorMessage = "No moves to undo";
+                }
             } else if (input.equalsIgnoreCase("help")) {
                 showHelpMenu();
             } else if (!input.isEmpty()) {
-                processMove(input);
+                errorMessage = processMove(input);
             }
         }
     }
 
-    private static void processMove(String input) {
+    private static String processMove(String input) {
         try {
-            String[] parts = input.split("\\s+");
-
-            if (parts.length == 1) {
-                board.makeMove(input);
-                System.out.println("✓ Move played: " + input);
-            } else if (parts.length == 2) {
-                String from = parts[0].toLowerCase();
-                String to = parts[1].toLowerCase();
-
-                board.move(from, to);
-                System.out.println("✓ Move played: " + from + " → " + to);
-            } else {
-                System.out.println("Invalid input format. Use: e2 e4 or Nf3");
-            }
-        } catch (RuntimeException e) {
-            System.out.println("✗ Illegal move: " + e.getMessage());
+            board.move(input);
+            return null; // Няма грешка
+        } catch (Board.IllegalMoveException e) {
+            return e.getMessage();
         } catch (Exception e) {
-            System.out.println("✗ Error: " + e.getMessage());
+            return e.getMessage();
         }
-
-        System.out.print("\nPress Enter to continue...");
-        scanner.nextLine();
     }
 
     private static void handleResign() {
@@ -115,17 +114,12 @@ public class ChessCLI {
         String winner = board.sideToMove == Color.WHITE ? "Black" : "White";
         System.out.println(loser + " resigns. " + winner + " wins!");
         gameActive = false;
-        System.out.print("Press Enter to continue...");
         scanner.nextLine();
     }
 
     private static void handleDraw() {
-        System.out.print("Propose a draw? (y/n): ");
-        String response = scanner.nextLine().trim().toLowerCase();
-        if (response.startsWith("y")) {
-            System.out.println("The game ended in a draw.");
-            gameActive = false;
-        }
+        System.out.println("The game ended in a draw.");
+        gameActive = false;
     }
 
     private static void showHelpMenu() {
@@ -140,14 +134,17 @@ public class ChessCLI {
         System.out.println("║    O-O     - Kingside castling        ║");
         System.out.println("║    O-O-O   - Queenside castling       ║");
         System.out.println("║    e8=Q    - Pawn promotes to Queen   ║");
+        System.out.println("║    Nbd7    - Knight from b-file to d7 ║");
+        System.out.println("║    R1a3    - Rook from rank 1 to a3   ║");
         System.out.println("║                                       ║");
         System.out.println("║  Coordinate Notation:                 ║");
         System.out.println("║    e2 e4   - Move from e2 to e4       ║");
         System.out.println("║    g1 f3   - Move from g1 to f3       ║");
         System.out.println("║                                       ║");
         System.out.println("║  Commands:                            ║");
+        System.out.println("║    undo    - Take back last move      ║");
         System.out.println("║    resign  - Give up the game         ║");
-        System.out.println("║    draw    - Propose a draw           ║");
+        System.out.println("║    draw    - End game in a draw       ║");
         System.out.println("║    help    - Show this help menu      ║");
         System.out.println("╚═══════════════════════════════════════╝");
         System.out.print("Press Enter to return...");
@@ -168,17 +165,46 @@ public class ChessCLI {
     }
 
     private static void printColoredBoard() {
+        // Показваме взетите фигури от черния играч (взети от белия)
+        System.out.println();
+        
+        if (!board.capturedByBlack.isEmpty()) {
+            System.out.print("Captured: ");
+            for (Piece p : board.capturedByBlack) {
+                System.out.print(Ansi.ansi().fg(Ansi.Color.WHITE).bold().a(getPieceUnicode(p) + " ").reset());
+            }
+        }
+        
         System.out.println("\n   a  b  c  d  e  f  g  h");
 
         for (int rank = 7; rank >= 0; rank--) {
             System.out.print((rank + 1) + " ");
             for (int file = 0; file < 8; file++) {
+                int square = rank * 8 + file;
                 boolean isLightSquare = (rank + file) % 2 == 0;
-                int r = isLightSquare ? 200 : 90;
-                int g = isLightSquare ? 190 : 67;
-                int b = isLightSquare ? 180 : 33;
                 
-                Piece piece = board.getPieceAt(rank * 8 + file);
+                // Highlighting за последния ход
+                boolean isFromSquare = square == board.lastMoveFrom;
+                boolean isToSquare = square == board.lastMoveTo;
+                
+                int r, g, b;
+                
+                if (isFromSquare || isToSquare) {
+                    // Жълто-зелен highlight за последния ход
+                    r = 180;
+                    g = 180;
+                    b = 80;
+                } else if (isLightSquare) {
+                    r = 200;
+                    g = 190;
+                    b = 180;
+                } else {
+                    r = 90;
+                    g = 67;
+                    b = 33;
+                }
+                
+                Piece piece = board.getPieceAt(square);
                 String pieceChar = getPieceUnicode(piece);
                 Ansi.Color fgColor = (piece != null && piece.color() == Color.WHITE) ? whitePiece : blackPiece;
 
@@ -187,9 +213,17 @@ public class ChessCLI {
             System.out.println(" " + (rank + 1));
         }
 
-        System.out.println("   a  b  c  d  e  f  g  h\n");
-        String sideToMove = board.sideToMove == Color.WHITE ? "White" : "Black";
-        System.out.println("Current Player: " + sideToMove);
+        System.out.println("   a  b  c  d  e  f  g  h");
+        
+        // Показваме взетите фигури от белия играч (взети от черния)
+        System.out.println();
+        if (!board.capturedByWhite.isEmpty()) {
+            System.out.print("Captured: ");
+            for (Piece p : board.capturedByWhite) {
+                System.out.print(Ansi.ansi().fg(Ansi.Color.BLACK).bold().a(getPieceUnicode(p) + " ").reset());
+            }
+            System.out.println();
+        }
     }
 
     private static String getPieceUnicode(Piece piece) {
