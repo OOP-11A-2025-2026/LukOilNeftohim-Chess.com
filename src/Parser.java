@@ -124,10 +124,6 @@ public class Parser {
         return p;
     }
 
-    private byte convertPosToByte(char file, char rank) {
-        return
-    }
-
 
     private Move parseMove(String token, Color c) {
         Move move = new Move();
@@ -189,7 +185,7 @@ public class Parser {
                     move.disambiguation = (byte) (token.charAt(0) - 'a');
                 else
                     move.disambiguation = (byte) (token.charAt(0) - '1');
-                
+
                 token = token.substring(1);
                 break;
             }
