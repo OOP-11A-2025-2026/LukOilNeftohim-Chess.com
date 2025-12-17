@@ -161,14 +161,13 @@ public class CLI {
         try {
             board.move(input);
             
-            // Update timer after successful move
             if (timer != null) {
                 timer.stopTimer();
                 timer.switchPlayer();
                 timer.startTimer(board.sideToMove);
             }
             
-            return null; // No error
+            return null; 
         } catch (Board.IllegalMoveException e) {
             return e.getMessage();
         } catch (Exception e) {
