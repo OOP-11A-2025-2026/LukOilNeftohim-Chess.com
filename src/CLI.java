@@ -129,7 +129,7 @@ public class CLI {
                 }
             }
             
-            System.out.print(Ansi.ansi.bold().a(game.getBoard().sideToMove == Color.WHITE ? "White's turn: " : "Black's turn: ").reset());
+            System.out.print(Ansi.ansi().bold().a(game.getBoard().sideToMove == Color.WHITE ? "White's turn: " : "Black's turn: ").reset());
             
             String input = scanner.nextLine().trim();
 
