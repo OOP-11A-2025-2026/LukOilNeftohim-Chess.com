@@ -1,9 +1,12 @@
 import java.util.Scanner;
 import model.*;
+import io.Storage;
+import io.Parser;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
 
 public class CLI {
+    private static Game game;
     private static Board board;
     private static Scanner scanner;
     private static boolean gameActive;
@@ -45,18 +48,46 @@ public class CLI {
         System.out.print("Enter choice (1-3): ");
     }
 
-    private static void startNewGame() {
-        board = new Board();
+    private static void startNewGame(){
+        game = new Game();
+        board = game.getBoard();
+
         gameActive = true;
         playGame();
     }
 
     private static void loadGame() {
+        clearScreen();
+        System.out.println("╔═══════════════════════════════════════╗");
+        System.out.println("║      Load Game from PGN               ║");
+        System.out.println("╚═══════════════════════════════════════╝");
         System.out.print("Enter PGN file name: ");
         String fileName = scanner.nextLine().trim();
-        System.out.println("PGN loading not yet implemented.");
-        System.out.print("Press Enter to continue...");
-        scanner.nextLine();
+        
+        try {
+            // Зареждаме играта от PGN файл
+            game = Storage.readGame(fileName);
+
+            board = game.getBoard();
+            
+            System.out.println("\n✓ Game loaded successfully!");
+            System.out.println("Event: " + game.getTags().getOrDefault("Event", "Unknown"));
+            System.out.println("White: " + game.getTags().getOrDefault("White", "Unknown"));
+            System.out.println("Black: " + game.getTags().getOrDefault("Black", "Unknown"));
+            System.out.println("Moves loaded: " + game.getMoves().size());
+            System.out.print("\nPress Enter to continue...");
+            scanner.nextLine();
+            
+            for(Move m : game.getMoves()) {board.makeMove(m);}
+
+            gameActive = true;
+            playGame();
+        } catch (Exception e) {
+            System.out.println(Ansi.ansi().fg(Ansi.Color.RED)
+                .a("\n✗ Error loading game: " + e.getMessage()).reset());
+            System.out.print("Press Enter to continue...");
+            scanner.nextLine();
+        }
     }
 
     private static void playGame() {
@@ -73,8 +104,10 @@ public class CLI {
             }
             
             System.out.println();
-
-            System.out.print(board.sideToMove == Color.WHITE ? "White's turn: " : "Black's turn: ");
+            
+            // Prompt в цвета на играча
+            Ansi.Color promptColor = game.getBoard().sideToMove == Color.WHITE ? Ansi.Color.WHITE : Ansi.Color.BLACK;
+            System.out.print(Ansi.ansi().fg(promptColor).bold().a("Enter move: ").reset());
             
             String input = scanner.nextLine().trim();
 
@@ -90,6 +123,8 @@ public class CLI {
                 } else {
                     errorMessage = "No moves to undo";
                 }
+            } else if (input.equalsIgnoreCase("save")) {
+                saveGame();
             } else if (input.equalsIgnoreCase("help")) {
                 showHelpMenu();
             } else if (!input.isEmpty()) {
@@ -113,14 +148,51 @@ public class CLI {
         String loser = board.sideToMove == Color.WHITE ? "White" : "Black";
         String winner = board.sideToMove == Color.WHITE ? "Black" : "White";
         System.out.println(loser + " resigns. " + winner + " wins!");
+        
+        // Обновяваме резултата
+        String result = board.sideToMove == Color.WHITE ? "0-1" : "1-0";
+        game.getTags().put("Result", result);
+        
         gameActive = false;
         scanner.nextLine();
     }
 
     private static void handleDraw() {
         System.out.println("The game ended in a draw.");
+        game.getTags().put("Result", "1/2-1/2");
         gameActive = false;
     }
+    
+    private static void saveGame() {
+        System.out.print("Enter filename to save (e.g., game.pgn): ");
+        String fileName = scanner.nextLine().trim();
+        
+        if (fileName.isEmpty()) {
+            fileName = "game_" + System.currentTimeMillis() + ".pgn";
+        }
+        
+        if (!fileName.endsWith(".pgn")) {
+            fileName += ".pgn";
+        }
+        
+        try {                        
+            // Конвертираме историята на ходовете към Move обекти
+            // За сега просто записваме таговете и ходовете като String
+            Storage.writeGame(fileName, game);
+            
+            System.out.println(Ansi.ansi().fg(Ansi.Color.GREEN)
+                .a("✓ Game saved to " + fileName).reset());
+            System.out.print("Press Enter to continue...");
+            scanner.nextLine();
+        } catch (Exception e) {
+            System.out.println(Ansi.ansi().fg(Ansi.Color.RED)
+                .a("✗ Error saving game: " + e.getMessage()).reset());
+            System.out.print("Press Enter to continue...");
+            scanner.nextLine();
+        }
+    }
+   
+    
 
     private static void showHelpMenu() {
         clearScreen();
@@ -143,6 +215,7 @@ public class CLI {
         System.out.println("║                                       ║");
         System.out.println("║  Commands:                            ║");
         System.out.println("║    undo    - Take back last move      ║");
+        System.out.println("║    save    - Save game to PGN file    ║");
         System.out.println("║    resign  - Give up the game         ║");
         System.out.println("║    draw    - End game in a draw       ║");
         System.out.println("║    help    - Show this help menu      ║");
@@ -165,14 +238,15 @@ public class CLI {
     }
 
     private static void printColoredBoard() {
-        // Показваме взетите фигури от черния играч (взети от белия)
         System.out.println();
-        
-        if (!board.capturedByBlack.isEmpty()) {
-            System.out.print("Captured: ");
+        System.out.print("Black captured: ");
+        if (board.capturedByBlack.isEmpty()) {
+            System.out.println("—");
+        } else {
             for (Piece p : board.capturedByBlack) {
                 System.out.print(Ansi.ansi().fg(Ansi.Color.WHITE).bold().a(getPieceUnicode(p) + " ").reset());
             }
+            System.out.println();
         }
         
         System.out.println("\n   a  b  c  d  e  f  g  h");
@@ -217,8 +291,10 @@ public class CLI {
         
         // Показваме взетите фигури от белия играч (взети от черния)
         System.out.println();
-        if (!board.capturedByWhite.isEmpty()) {
-            System.out.print("Captured: ");
+        System.out.print("White captured: ");
+        if (board.capturedByWhite.isEmpty()) {
+            System.out.println("—");
+        } else {
             for (Piece p : board.capturedByWhite) {
                 System.out.print(Ansi.ansi().fg(Ansi.Color.BLACK).bold().a(getPieceUnicode(p) + " ").reset());
             }
