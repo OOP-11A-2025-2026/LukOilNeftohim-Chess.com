@@ -10,6 +10,7 @@ public class CLI {
     private static Board board;
     private static Scanner scanner;
     private static boolean gameActive;
+    private static Timer timer;
 
     static Ansi.Color whitePiece = Ansi.Color.WHITE; 
     static Ansi.Color blackPiece = Ansi.Color.BLACK; 
@@ -51,6 +52,12 @@ public class CLI {
     private static void startNewGame(){
         game = new Game();
         board = game.getBoard();
+        
+        // Choose time control
+        timer = selectTimeControl();
+        if (timer != null) {
+            timer.startTimer(Color.WHITE);
+        }
 
         gameActive = true;
         playGame();
@@ -105,7 +112,24 @@ public class CLI {
             
             System.out.println();
             
-            // Prompt в цвета на играча
+            // Display timer if enabled
+            if (timer != null) {
+                String whiteTime = timer.getFormattedTime(Color.WHITE);
+                String blackTime = timer.getFormattedTime(Color.BLACK);
+                System.out.println("White: " + whiteTime + "  |  Black: " + blackTime);
+                
+                // Check for timeout
+                if (timer.isTimeOut(board.sideToMove)) {
+                    String loser = board.sideToMove == Color.WHITE ? "White" : "Black";
+                    String winner = board.sideToMove == Color.WHITE ? "Black" : "White";
+                    System.out.println(Ansi.ansi().fg(Ansi.Color.RED).a("✗ " + loser + " is out of time! " + winner + " wins!").reset());
+                    gameActive = false;
+                    game.getTags().put("Result", board.sideToMove == Color.WHITE ? "0-1" : "1-0");
+                    break;
+                }
+            }
+            
+            // Prompt in the color of the player
             Ansi.Color promptColor = game.getBoard().sideToMove == Color.WHITE ? Ansi.Color.WHITE : Ansi.Color.BLACK;
             System.out.print(Ansi.ansi().fg(promptColor).bold().a("Enter move: ").reset());
             
@@ -136,7 +160,15 @@ public class CLI {
     private static String processMove(String input) {
         try {
             board.move(input);
-            return null; // Няма грешка
+            
+            // Update timer after successful move
+            if (timer != null) {
+                timer.stopTimer();
+                timer.switchPlayer();
+                timer.startTimer(board.sideToMove);
+            }
+            
+            return null; // No error
         } catch (Board.IllegalMoveException e) {
             return e.getMessage();
         } catch (Exception e) {
@@ -149,9 +181,14 @@ public class CLI {
         String winner = board.sideToMove == Color.WHITE ? "Black" : "White";
         System.out.println(loser + " resigns. " + winner + " wins!");
         
-        // Обновяваме резултата
+        // Update result
         String result = board.sideToMove == Color.WHITE ? "0-1" : "1-0";
         game.getTags().put("Result", result);
+        
+        // Stop timer
+        if (timer != null) {
+            timer.shutdown();
+        }
         
         gameActive = false;
         scanner.nextLine();
@@ -160,6 +197,12 @@ public class CLI {
     private static void handleDraw() {
         System.out.println("The game ended in a draw.");
         game.getTags().put("Result", "1/2-1/2");
+        
+        // Stop timer
+        if (timer != null) {
+            timer.shutdown();
+        }
+        
         gameActive = false;
     }
     
@@ -313,5 +356,52 @@ public class CLI {
             case KNIGHT -> "♞";
             case PAWN -> "♟";
         };
+    }
+    
+    private static Timer selectTimeControl() {
+        clearScreen();
+        System.out.println("╔═══════════════════════════════════════╗");
+        System.out.println("║      Select Time Control              ║");
+        System.out.println("╠═══════════════════════════════════════╣");
+        System.out.println("║  1. Bullet (1 min + 0 sec increment)  ║");
+        System.out.println("║  2. Blitz (3 min + 2 sec increment)   ║");
+        System.out.println("║  3. Rapid (10 min + 0 sec increment)  ║");
+        System.out.println("║  4. Classical (30 min)                ║");
+        System.out.println("║  5. Custom time                       ║");
+        System.out.println("║  6. No timer (unlimited)              ║");
+        System.out.println("╚═══════════════════════════════════════╝");
+        System.out.print("Choose option (1-6): ");
+        
+        int choice = getUserChoice();
+        
+        return switch (choice) {
+            case 1 -> new Timer(60000, 0);           // 1 minute, no increment
+            case 2 -> new Timer(180000, 2000);       // 3 minutes, 2 second increment
+            case 3 -> new Timer(600000, 0);          // 10 minutes, no increment
+            case 4 -> new Timer(1800000, 0);         // 30 minutes, no increment
+            case 5 -> selectCustomTime();
+            case 6 -> null;                          // No timer
+            default -> new Timer(300000, 0);         // Default: 5 minutes
+        };
+    }
+    
+    private static Timer selectCustomTime() {
+        System.out.print("Enter initial time in minutes: ");
+        long minutes = 0;
+        try {
+            minutes = Long.parseLong(scanner.nextLine().trim());
+        } catch (NumberFormatException e) {
+            minutes = 5;
+        }
+        
+        System.out.print("Enter increment in seconds (0 for none): ");
+        long increment = 0;
+        try {
+            increment = Long.parseLong(scanner.nextLine().trim());
+        } catch (NumberFormatException e) {
+            increment = 0;
+        }
+        
+        return new Timer(minutes * 60 * 1000, increment * 1000);
     }
 }
