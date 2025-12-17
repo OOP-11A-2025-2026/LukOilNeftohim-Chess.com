@@ -5,6 +5,10 @@
 - enum за черни и бели фигури
 
 - enum за вида на фигурата
+- - ```javascript I'm A tab
+enum Type {
+    PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING;
+```
 
 - функция toSANChar
 
