@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import model.*;
 /**
  * Parser за PNG/PGN формат. 
  *

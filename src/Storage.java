@@ -1,6 +1,9 @@
 import java.io.*;
 import java.util.*;
 
+import model.Game;
+import model.Move;
+
 public class Storage {
 
     public static Game readGame(String fileName) {

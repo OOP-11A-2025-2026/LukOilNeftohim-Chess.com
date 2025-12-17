@@ -1,12 +1,6 @@
-enum Color {
-    WHITE, BLACK;
+package model;
 
-    public Color opposite() {
-        return this == WHITE ? BLACK : WHITE;
-    }
-}
-
-enum Type {
+public enum Type {
     PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING;
 
     public char toSANChar() {
@@ -20,6 +14,3 @@ enum Type {
         };
     }
 }
-
-public record Piece(Type type, Color color) {}
-

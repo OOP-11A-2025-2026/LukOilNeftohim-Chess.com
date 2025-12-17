@@ -1,3 +1,4 @@
+package model;
 public class Move{
     public static final byte FLAG_SHORT_CASTLE=  0b00000001;
     public static final byte FLAG_LONG_CASTLE =  0b00000010;

@@ -1,9 +1,7 @@
-import java.io.*;
+package model;
 import java.util.*;
 
-// =====================
-// Клас за шахматна партия
-// =====================
+
 public class Game {
     private Board board;
     private List<Move> moves;

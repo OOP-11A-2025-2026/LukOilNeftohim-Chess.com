@@ -1,35 +1,33 @@
 import java.util.Scanner;
+import model.*;
+import org.fusesource.jansi.Ansi;
+import org.fusesource.jansi.AnsiConsole;
 
 public class ChessCLI {
     private static Board board;
     private static Scanner scanner;
     private static boolean gameActive;
 
-    private static final String RESET = "\033[0m";
-    private static final String WHITE_BG = "\033[47m";
-    private static final String BLACK_BG = "\033[40m";
-    private static final String WHITE_PIECE = "\033[97m";
-    private static final String BLACK_PIECE = "\033[30m"; 
-
-    private static final String[] UNICODE_PIECES = {
-            "♔", "♕", "♖", "♗", "♘", "♙",
-            "♚", "♛", "♜", "♝", "♞", "♟"
-    };
+    static Ansi.Color whitePiece = Ansi.Color.WHITE; 
+    static Ansi.Color blackPiece = Ansi.Color.BLACK; 
 
     public static void main(String[] args) {
+        AnsiConsole.systemInstall(); // Стартира Jansi
         scanner = new Scanner(System.in);
         gameActive = false;
 
         while (true) {
             showMainMenu();
-    
+
             switch (getUserChoice()) {
                 case 1 -> startNewGame();
                 case 2 -> loadGame();
-                case 3 -> 
-                    {System.out.println("Goodbye!");
+                case 3 -> {
+                    System.out.println("Goodbye!");
                     scanner.close();
-                    return;}
+                    AnsiConsole.systemUninstall(); // Спира Jansi
+                    return;
+                }
                 default -> System.out.println("Invalid choice. Please try again.");
             }
         }
@@ -56,7 +54,6 @@ public class ChessCLI {
     private static void loadGame() {
         System.out.print("Enter PGN file name: ");
         String fileName = scanner.nextLine().trim();
-        // TODO: Integrate PGN loading
         System.out.println("PGN loading not yet implemented.");
         System.out.print("Press Enter to continue...");
         scanner.nextLine();
@@ -68,7 +65,7 @@ public class ChessCLI {
             printColoredBoard();
 
             String sideToMove = board.sideToMove == Color.WHITE ? "White" : "Black";
-            System.out.println("\n" + sideToMove == Color.WHITE + "'s turn");
+            System.out.println("\n" + sideToMove + "'s turn");
             System.out.println("Options: [move] [resign] [draw] [help]");
             System.out.print("Enter move: ");
             String input = scanner.nextLine().trim();
@@ -92,24 +89,24 @@ public class ChessCLI {
             String[] parts = input.split("\\s+");
 
             if (parts.length == 1) {
-                // TODO: Implement algebraic notation parser
-
-                System.out.println("Algebraic notation not yet fully implemented.");
-                System.out.println("Please use coordinate notation: e2 e4");
+                board.makeMove(input);
+                System.out.println("✓ Move played: " + input);
             } else if (parts.length == 2) {
                 String from = parts[0].toLowerCase();
                 String to = parts[1].toLowerCase();
 
                 board.move(from, to);
-                
+                System.out.println("✓ Move played: " + from + " → " + to);
             } else {
                 System.out.println("Invalid input format. Use: e2 e4 or Nf3");
             }
+        } catch (RuntimeException e) {
+            System.out.println("✗ Illegal move: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("Error processing move: " + e.getMessage());
+            System.out.println("✗ Error: " + e.getMessage());
         }
 
-        System.out.print("Press Enter to continue...");
+        System.out.print("\nPress Enter to continue...");
         scanner.nextLine();
     }
 
@@ -118,12 +115,14 @@ public class ChessCLI {
         String winner = board.sideToMove == Color.WHITE ? "Black" : "White";
         System.out.println(loser + " resigns. " + winner + " wins!");
         gameActive = false;
+        System.out.print("Press Enter to continue...");
+        scanner.nextLine();
     }
 
     private static void handleDraw() {
         System.out.print("Propose a draw? (y/n): ");
         String response = scanner.nextLine().trim().toLowerCase();
-        if (response.toLowerCase().charAt(0) == 'y') {
+        if (response.startsWith("y")) {
             System.out.println("The game ended in a draw.");
             gameActive = false;
         }
@@ -134,11 +133,17 @@ public class ChessCLI {
         System.out.println("╔═══════════════════════════════════════╗");
         System.out.println("║      HELP - How to play               ║");
         System.out.println("╠═══════════════════════════════════════╣");
-        System.out.println("║  Coordinate Notation:  e2 e4          ║");
-        System.out.println("║    (from square to square)            ║");
+        System.out.println("║  Algebraic Notation (SAN):            ║");
+        System.out.println("║    e4      - Pawn to e4               ║");
+        System.out.println("║    Nf3     - Knight to f3             ║");
+        System.out.println("║    Bxe5    - Bishop takes on e5       ║");
+        System.out.println("║    O-O     - Kingside castling        ║");
+        System.out.println("║    O-O-O   - Queenside castling       ║");
+        System.out.println("║    e8=Q    - Pawn promotes to Queen   ║");
         System.out.println("║                                       ║");
-        System.out.println("║  Algebraic Notation:   Nf3, e4        ║");
-        System.out.println("║    (coming soon)                      ║");
+        System.out.println("║  Coordinate Notation:                 ║");
+        System.out.println("║    e2 e4   - Move from e2 to e4       ║");
+        System.out.println("║    g1 f3   - Move from g1 to f3       ║");
         System.out.println("║                                       ║");
         System.out.println("║  Commands:                            ║");
         System.out.println("║    resign  - Give up the game         ║");
@@ -158,48 +163,45 @@ public class ChessCLI {
         }
     }
 
-    private static void clearScreen() 
-    {
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
+    private static void clearScreen() {
+        System.out.print(Ansi.ansi().eraseScreen().cursor(0, 0));
     }
 
     private static void printColoredBoard() {
-        System.out.println("\n" + "   a  b  c  d  e  f  g  h");
-        
+        System.out.println("\n   a  b  c  d  e  f  g  h");
+
         for (int rank = 7; rank >= 0; rank--) {
             System.out.print((rank + 1) + " ");
-            
             for (int file = 0; file < 8; file++) {
                 boolean isLightSquare = (rank + file) % 2 == 0;
-                String bgColor = isLightSquare ? WHITE_BG : BLACK_BG;
+                int r = isLightSquare ? 200 : 90;
+                int g = isLightSquare ? 190 : 67;
+                int b = isLightSquare ? 180 : 33;
                 
-                Piece piece = board.getPieceAt(rank*8 + file); 
-                String pieceType = getPieceUnicode(piece);
-                String pieceColor = (piece != null && piece.color() == Color.WHITE) ? WHITE_PIECE : BLACK_PIECE;
-                
-                System.out.print(bgColor + pieceColor + " " + pieceType + " " + RESET);
+                Piece piece = board.getPieceAt(rank * 8 + file);
+                String pieceChar = getPieceUnicode(piece);
+                Ansi.Color fgColor = (piece != null && piece.color() == Color.WHITE) ? whitePiece : blackPiece;
+
+                System.out.print(Ansi.ansi().bgRgb(r, g, b).fg(fgColor).bold().a(" " + pieceChar + " ").boldOff().reset());
             }
-            
             System.out.println(" " + (rank + 1));
         }
-        
+
         System.out.println("   a  b  c  d  e  f  g  h\n");
-        
         String sideToMove = board.sideToMove == Color.WHITE ? "White" : "Black";
         System.out.println("Current Player: " + sideToMove);
     }
 
     private static String getPieceUnicode(Piece piece) {
         if (piece == null) return " ";
-    
+
         return switch (piece.type()) {
-            case KING   -> piece.color() == Color.WHITE ? "♔" : "♚";
-            case QUEEN  -> piece.color() == Color.WHITE ? "♕" : "♛";
-            case ROOK   -> piece.color() == Color.WHITE ? "♖" : "♜";
-            case BISHOP -> piece.color() == Color.WHITE ? "♗" : "♝";
-            case KNIGHT -> piece.color() == Color.WHITE ? "♘" : "♞";
-            case PAWN   -> piece.color() == Color.WHITE ? "♙" : "♟";
+            case KING -> "♚";
+            case QUEEN -> "♛";
+            case ROOK -> "♜";
+            case BISHOP -> "♝";
+            case KNIGHT -> "♞";
+            case PAWN -> "♟";
         };
     }
 }
