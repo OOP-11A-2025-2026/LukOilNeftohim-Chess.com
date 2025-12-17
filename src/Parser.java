@@ -125,7 +125,7 @@ public class Parser {
     }
 
     private byte convertPosToByte(char file, char rank) {
-        return (byte) ( (rank - '1') * 8 + (file - 'a') );
+        return
     }
 
 
@@ -179,13 +179,17 @@ public class Parser {
             case 4:
             {
                 //e4
-                move.disambiguation = convertPosToByte(token.charAt(0), token.charAt(1));
+                move.disambiguation = (byte) ( (token.charAt(1) - '1') * 8 + (token.charAt(0) - 'a') );
                 token = token.substring(2);
                 break;
             }
             case 3:
             {
-                //ami posle
+                if(token.charAt(0) >= 'a')
+                    move.disambiguation = (byte) (token.charAt(0) - 'a');
+                else
+                    move.disambiguation = (byte) (token.charAt(0) - '1');
+                
                 token = token.substring(1);
                 break;
             }
