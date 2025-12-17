@@ -1,5 +1,9 @@
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Parser за PNG/PGN формат. 
@@ -29,150 +33,172 @@ import java.util.List;
  */
 public class Parser {
 
-    /**
-     * Главен вход към PNG/PGN парсера.
-     * Тук:
-     *  - извличаме PGN таговете (между [])
-     *  - намираме текстовия блок с ходовете
-     *  - разбиваме ги по space/newline/цифри
-     *  - подаваме всеки SAN ход към parseMove(token)
-     */
     public void parsePNG(String text) {
+        Map<String, String> tags = parseTags(text);
+
+        int lastTag = text.lastIndexOf(']');
+        if (lastTag == -1) {
+            return;
+        }
+
+        String movesBlock = text.substring(lastTag + 1);
+        List<Move> moves = parseMoves(movesBlock);
     }
 
-    /**
-     * Парсва PGN таговете във формата:
-     *   [Key "Value"]
-     *
-     * Извлича ги в Map<String,String>.
-     * Използва се за metadata като:
-     *   Event, Site, Date, Result, White, Black, TimeControl, ECO...
-     */
     private Map<String, String> parseTags(String text) {
-        return null;    
-        
+        Map<String, String> Tags = new HashMap<>();
+
+        Pattern TagPattern = Pattern.compile("\"\\\\[(\\\\w+)\\\\s+\\\"([^\\\"]*)\\\"\\\\]\"");
+        Matcher TagMatcher = TagPattern.matcher(text);
+
+        while(TagMatcher.find())
+        {
+            Tags.put(TagMatcher.group(1), TagMatcher.group(2));
+        }
+
+        return Tags;
     }
 
-    /**
-     * Парсва списъка от SAN ходове от блок като:
-     *   1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 ...
-     *
-     * Премахва номера на ходове и коментари,
-     * после връща List<Move>.
-     * 
-     * Евентуално може да се направи така, че всеки ход да се изчислява в thread.
-     */
+
     private List<Move> parseMoves(String text) {
-        return null;
+        List<Move> Moves = new ArrayList<>();
+
+//        if (text.endsWith("1/2-1/2"))
+//        {
+//            //draw
+//        } else if (text.endsWith("1-0")) {
+//            //white
+//        } else if (text.endsWith("0-1")) {
+//            //black
+//        }
+
+        text = text.replaceAll("\\{[^}]*}", ""); // maha komentari
+        //text = text.replaceAll("1-0|0-1|1/2-1/2|\\*", "");
+        text = text.replaceAll("\\d+\\.", ""); // maha da
+        System.out.println(text);
+
+        String[] tokens = text.trim().split("\\s+");
+        for (int i=0; i < tokens.length; i++)
+        {
+            System.out.println(tokens[i]);
+            if (i%2 == 0) {
+                Moves.add(parseMove(tokens[i], Color.WHITE));
+            } else {
+                Moves.add(parseMove(tokens[i], Color.BLACK));
+            }
+        }
+
+        return Moves;
     }
 
-    /**
-     * Парсва един SAN токен, например:
-     *   "e4", "Nf3", "axb8=Q+", "Qxe6#", "R1a1", "O-O", "O-O-O"
-     *
-     * 1) Инициализира нов Move
-     * 2) Извиква под-методите за парсване в коректен ред
-     * 3) Връща готов Move
-     *
-     * Този метод работи като контролер на целия парсинг.
-     */
-    private void parseMove(String token) {
+    private Piece parsePiece(char pieceChar, Color c)
+    {
+        Piece p;
+        switch (pieceChar)
+        {
+            case 'K': {
+                p = new Piece(Type.KING, c);
+                break;
+            }
+            case 'Q': {
+                p = new Piece(Type.QUEEN, c);
+                break;
+            }
+            case 'B': {
+                p = new Piece(Type.BISHOP, c);
+                break;
+            }
+            case 'N': {
+                p = new Piece(Type.KNIGHT, c);
+                break;
+            }
+            case 'R': {
+                p = new Piece(Type.ROOK, c);
+                break;
+            }
+            default: {
+                p = new Piece(Type.PAWN, c);
+                break;
+            }
+        }
+        return p;
     }
 
-    /**
-     * Този метод:
-     *   - определя Piece
-     *   - маркира special flags (castling, en-passant)
-     * 
-     * Разбира първия символ от SAN:
-     *
-     * - Ако е 'N','B','R','Q','K' -> фигура (използваме конструктора на Piece)
-     * - Ако е 'a'..'h' или 'x' -> пешка 
-     * - Ако е 'e' и след него има'x' -> en passant
-     * - Ако започва с 'O' -> рокада
-     *
-     * Използва extended switch за разпознаване:
-     *
-     *     switch (firstChar) {
-     *         case 'N' -> Piece.KNIGHT;
-     *         case 'B' -> Piece.BISHOP;
-     *         case 'R' -> Piece.ROOK;
-     *         case 'Q' -> Piece.QUEEN;
-     *         case 'K' -> Piece.KING;
-     *         default -> Piece.PAWN;
-     *     }
-     */
-    private Piece parsePiece(Move move, String token) {
-        return null;
+    private byte convertPosToByte(char file, char rank) {
+        return (byte) ( (rank - '1') * 8 + (file - 'a') );
     }
 
-    /**
-     * Парсва символите в края на SAN:
-     *
-     *   '+' -> шах
-     *   '#' -> мат
-     *
-     * Важно: това се прави преди promotion/target,
-     * защото последният символ трябва да бъде премахнат преди следващите анализи.
-     *
-     * Extended switch пример:
-     *
-     *     char last = token.charAt(token.length()-1);
-     *     switch (last) {
-     *         case '+' -> move.setCheck(true);
-     *         case '#' -> move.setMate(true);
-     *         default -> {}
-     *     }
-     */
-    private void parseCheckOrMate(Move move) {}
 
-    /**
-     * Парсва промоция във вида:
-     *     =Q, =R, =B, =N
-     *
-     * Пример: "axb8=Q", "e8=R"
-     *
-     * Extended switch за promotion:
-     *
-     *     char p = token.charAt(idx);
-     *     switch (p) {
-     *         case 'Q' -> move.promotion = QUEEN;
-     *         case 'R' -> move.promotion = ROOK;
-     *         case 'B' -> move.promotion = BISHOP;
-     *         case 'N' -> move.promotion = KNIGHT;
-     *     }
-     *
-     * Методът премахва частта '=X' преди да продължи парсването на target square.
-     */
-    private void parsePromotion(Move move) {}
+    private Move parseMove(String token, Color c) {
+        Move move = new Move();
 
-    /**
-     * Парсва target square — последните два символа преди promotion/check.
-     * Например:
-     *   e4 -> file='e', rank='4'
-     *   d5 -> file='d', rank='5'
-     *
-     * Превръща ги в int/byte индекс 0–63:
-     *   index = (rank - '1') * 8 + (file - 'a')
-     *
-     */
-    private void parseTarget(Move move) {}
+        if (token.equals("1-0") || token.equals("0-1") || token.equals("1/2-1/2")) {
+            System.out.println(token);
+            return move;
+        }
 
-    /**
-     * Парсва вземане:
-     *  - просто отбелязва присъствието на 'x'
-     */
-    private void parseCaprute(Move move) {}
+        // castle
+        if (token.equals("O-O-O")) {
+            move.flags = (byte) (move.flags | Move.FLAG_LONG_CASTLE);
+            return move;
+        }
+        else if (token.equals("O-O")) {
+            move.flags = (byte) (move.flags | Move.FLAG_SHORT_CASTLE);
+            return move;
+        }
 
-    /**
-     * Парсва disambiguation частта между Piece и 'x' или target square:
-     *
-     * Примери:
-     *   Nbd2 -> file = 'b'
-     *   N1e3 -> rank = '1'
-     *   R1a1 -> file='1'? (не) -> rank='1', файл взет от target
-     *   Qe2xd5 -> file='e' , rank='2'
-     * 
-     */
-    private void parseDisambiguation(Move move){}
+
+        if (token.contains("+")) {
+            move.flags = (byte) (move.flags | Move.FLAG_CHECK);
+            token = token.replace("+", "");
+        }
+        else if (token.contains("#")) {
+            move.flags = (byte) (move.flags | Move.FLAG_MATE);
+            token = token.replace("#", "");
+        }
+
+
+        Piece p;
+        p = parsePiece(token.charAt(0), c);
+        move.piece = p;
+
+        token = token.substring(1);
+
+
+        if (token.contains("=")) {
+            move.flags = (byte) (move.flags | Move.FLAG_PROMOTION);
+
+            p = parsePiece(token.charAt(token.indexOf("=")), c);
+            move.piece = p;
+
+            token = token.replace("=", "");
+        }
+
+        switch (token.length())
+        {
+            case 4:
+            {
+                //e4
+                move.disambiguation = convertPosToByte(token.charAt(0), token.charAt(1));
+                token = token.substring(2);
+                break;
+            }
+            case 3:
+            {
+                //ami posle
+                token = token.substring(1);
+                break;
+            }
+            case 2: {break;}
+
+            default: {
+                //kaboom
+                break;
+            }
+        }
+
+        move.target = convertPosToByte(token.charAt(0), token.charAt(1));
+
+        return move;
+    }
 }
