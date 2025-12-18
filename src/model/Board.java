@@ -211,21 +211,27 @@ public class Board {
     private long slidingMoves(int from, long occ, int[] dirs) {
         long m = 0;
         for (int d : dirs) {
-            int t = from + d;
-            while (t >= 0 && t < 64 &&
-                    Math.abs((t % 8) - (from % 8)) <= 2) {
-                m |= 1L << t;
-                if ((occ & (1L << t)) != 0)
-                    break;
-                t += d;
+            int sq = from;
+            while (true) {
+                int prevFile = sq % 8;
+                sq += d;
+                
+                // Излязъл извън дъската
+                if (sq < 0 || sq >= 64) break;
+                
+                int currFile = sq % 8;
+                
+                // Обвил се (прескочил от един край на друг)
+                if (Math.abs(currFile - prevFile) > 1) break;
+                
+                m |= 1L << sq;
+                if ((occ & (1L << sq)) != 0) break;
             }
         }
         return m;
     }
 
-    
 
-    
     public void move(String input) throws IllegalMoveException {
         input = input.trim();
 
