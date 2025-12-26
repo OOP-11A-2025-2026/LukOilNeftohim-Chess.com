@@ -4,7 +4,8 @@ services:
   neftomate:
     image: lukoilneftohim/chess:latest
     build:
-      context: .
+      context: ../..   # Docker context е коренът на проекта
+      dockerfile: build/docker/Dockerfile
       network: host  
 
     container_name: chess
