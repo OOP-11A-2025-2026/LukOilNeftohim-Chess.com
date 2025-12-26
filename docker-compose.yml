@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  neftomate:
+    image: lukoilneftohim/chess:latest
+    build:
+      context: .
+      network: host  
+
+    container_name: chess
+
+    stdin_open: true
+    tty: true
+
+    volumes:
+      - neftomate_saves:/app/saves
+
+volumes:
+  neftomate_saves:
