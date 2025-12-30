@@ -1,34 +1,75 @@
 package model;
 
 import io.Parser;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+
+
+
 public class Board {
-
+    
     private final long[] bb = new long[12];
-    private static final int WP = 0, WN = 1, WB = 2, WR = 3, WQ = 4, WK = 5;
-    private static final int BP = 6, BN = 7, BB = 8, BR = 9, BQ = 10, BK = 11;
+    
+    
+    private static final int WP = 0;
+    
+    private static final int WN = 1;
+    
+    private static final int WB = 2;
+    
+    private static final int WR = 3;
+    
+    private static final int WQ = 4;
+    
+    private static final int WK = 5;
+    
+    private static final int BP = 6;
+    
+    private static final int BN = 7;
+    
+    private static final int BB = 8;
+    
+    private static final int BR = 9;
+    
+    private static final int BQ = 10;
+    
+    private static final int BK = 11;
 
+    
     public Color sideToMove = Color.WHITE;
-
+    
+    
     private int enPassantSquare = -1;
-    private boolean wkCastle = true, wqCastle = true, bkCastle = true, bqCastle = true;
-
+    
+    
+    private int castlingRights = 0b1111;
+    
+    
     public int lastMoveFrom = -1;
+    
+    
     public int lastMoveTo = -1;
 
+    
     private Stack<BoardState> history = new Stack<>();
-
+    
+    
     public List<Piece> capturedByWhite = new ArrayList<>();
+    
+    
     public List<Piece> capturedByBlack = new ArrayList<>();
 
+    
+    private static final MagicBitboards magicBitboards = new MagicBitboards();
+
+    
     public Board() {
         setupInitialPosition();
     }
 
+    
     private void setupInitialPosition() {
         bb[WP] = 0x000000000000FF00L;
         bb[BP] = 0x00FF000000000000L;
@@ -44,15 +85,13 @@ public class Board {
         bb[BK] = 0x1000000000000000L;
     }
 
+    
     private void saveState() {
         BoardState state = new BoardState();
         state.bb = bb.clone();
         state.sideToMove = sideToMove;
         state.enPassantSquare = enPassantSquare;
-        state.wkCastle = wkCastle;
-        state.wqCastle = wqCastle;
-        state.bkCastle = bkCastle;
-        state.bqCastle = bqCastle;
+        state.castlingRights = castlingRights;
         state.lastMoveFrom = lastMoveFrom;
         state.lastMoveTo = lastMoveTo;
         state.capturedByWhite = new ArrayList<>(capturedByWhite);
@@ -65,15 +104,10 @@ public class Board {
         if (history.isEmpty()) return false;
 
         BoardState state = history.pop();
-
         System.arraycopy(state.bb, 0, bb, 0, 12);
         sideToMove = state.sideToMove;
-        
         enPassantSquare = state.enPassantSquare;
-        wkCastle = state.wkCastle;
-        wqCastle = state.wqCastle;
-        bkCastle = state.bkCastle;
-        bqCastle = state.bqCastle;
+        castlingRights = state.castlingRights;
         lastMoveFrom = state.lastMoveFrom;
         lastMoveTo = state.lastMoveTo;
         capturedByWhite = state.capturedByWhite;
@@ -82,73 +116,128 @@ public class Board {
         return true;
     }
 
-    public boolean canUndo() { return !history.isEmpty(); }
-
-    public int sqIdx(String sq) {
-        char file = sq.charAt(0);
-        char rank = sq.charAt(1);
-        return (rank - '1') * 8 + (file - 'a');
+    
+    public boolean canUndo() { 
+        return !history.isEmpty(); 
     }
 
+    
+    private int sqIdx(String sq) {
+        return (sq.charAt(1) - '1') * 8 + (sq.charAt(0) - 'a');
+    }
+
+    
     private long whiteOcc() {
         long o = 0L;
         for (int i = 0; i < 6; i++) o |= bb[i];
-        
         return o;
     }
 
+    
     private long blackOcc() {
         long o = 0L;
         for (int i = 6; i < 12; i++) o |= bb[i];
-        
         return o;
     }
 
-    private long allOcc() { return whiteOcc() | blackOcc(); }
+    
+    private long allOcc() { 
+        return whiteOcc() | blackOcc(); 
+    }
 
+    
     private int pieceIndexAt(int square) {
         long mask = 1L << square;
         for (int i = 0; i < 12; i++) 
             if ((bb[i] & mask) != 0)
                 return i;
-        
         return -1;
     }
 
+    
     public Piece getPieceAt(int idx) {
         int p = pieceIndexAt(idx);
         if (p == -1) return null;
-        
         return new Piece(Type.values()[p % 6], p < 6 ? Color.WHITE : Color.BLACK);
     }
 
     
-
     private int getPieceIndex(Type type, Color color) {
         return type.ordinal() + (color == Color.WHITE ? 0 : 6);
     }
 
-    private boolean canMoveTo(int from, int target, Type type) {
-        return (generateMoves(from, type) & (1L << target)) != 0;
-    }
-
-    private long generateMoves(int from, Type type) {
-        long occ = allOcc();
-        long friendly = sideToMove == Color.WHITE ? whiteOcc() : blackOcc();
-
+    
+    private long getAttacks(int square, Type type, long occ) {
         return switch (type) {
-            case PAWN -> generatePawnMoves(from, sideToMove);
-            case KNIGHT -> generateKnightMoves(from) & ~friendly;
-            case BISHOP -> generateBishopMoves(from, occ) & ~friendly;
-            case ROOK -> generateRookMoves(from, occ) & ~friendly;
-            case QUEEN -> (generateBishopMoves(from, occ)
-                    | generateRookMoves(from, occ)) & ~friendly;
-            case KING -> generateKingMoves(from) & ~friendly;
+            case BISHOP -> magicBitboards.getBishopAttacks(square, occ);
+            case ROOK -> magicBitboards.getRookAttacks(square, occ);
+            case QUEEN -> magicBitboards.getBishopAttacks(square, occ) 
+                        | magicBitboards.getRookAttacks(square, occ);
+            case KNIGHT -> generateKnightMoves(square);
+            case KING -> generateKingMoves(square);
+            case PAWN -> 0L; // Pawns handled separately
         };
     }
 
     
+    private boolean isSquareAttacked(int square, Color byColor) {
+        long occ = allOcc();
+        long attackers = byColor == Color.WHITE ? whiteOcc() : blackOcc();
 
+        // Check pawns
+        int pawnIdx = byColor == Color.WHITE ? WP : BP;
+        long pawnAttacks = byColor == Color.WHITE 
+            ? generatePawnAttacks(square, Color.BLACK)
+            : generatePawnAttacks(square, Color.WHITE);
+        if ((bb[pawnIdx] & pawnAttacks) != 0) return true;
+
+        // Check knights
+        int knightIdx = byColor == Color.WHITE ? WN : BN;
+        if ((bb[knightIdx] & generateKnightMoves(square)) != 0) return true;
+
+        // Check bishops/queens (diagonal)
+        long bishopQueens = bb[byColor == Color.WHITE ? WB : BB] 
+                          | bb[byColor == Color.WHITE ? WQ : BQ];
+        if ((bishopQueens & magicBitboards.getBishopAttacks(square, occ)) != 0) return true;
+
+        // Check rooks/queens (straight)
+        long rookQueens = bb[byColor == Color.WHITE ? WR : BR] 
+                        | bb[byColor == Color.WHITE ? WQ : BQ];
+        if ((rookQueens & magicBitboards.getRookAttacks(square, occ)) != 0) return true;
+
+        // Check king
+        int kingIdx = byColor == Color.WHITE ? WK : BK;
+        if ((bb[kingIdx] & generateKingMoves(square)) != 0) return true;
+
+        return false;
+    }
+
+    
+    private int findKing(Color color) {
+        long kingBB = bb[color == Color.WHITE ? WK : BK];
+        return Long.numberOfTrailingZeros(kingBB);
+    }
+
+    
+    public boolean isInCheck(Color color) {
+        int kingSquare = findKing(color);
+        return isSquareAttacked(kingSquare, color.opposite());
+    }
+
+    
+    private long generatePawnAttacks(int square, Color color) {
+        long attacks = 0L;
+        int[] offsets = color == Color.WHITE ? new int[]{7, 9} : new int[]{-7, -9};
+        for (int off : offsets) {
+            int to = square + off;
+            if (to >= 0 && to < 64 && Math.abs((to % 8) - (square % 8)) == 1) {
+                attacks |= 1L << to;
+            }
+        }
+        return attacks;
+    }
+
+    
     private long generatePawnMoves(int from, Color color) {
         long moves = 0;
         int dir = color == Color.WHITE ? 8 : -8;
@@ -156,9 +245,11 @@ public class Board {
         long occ = allOcc();
         long enemy = color == Color.WHITE ? blackOcc() : whiteOcc();
 
+        // Forward move
         int fwd = from + dir;
-        if ((occ & (1L << fwd)) == 0) {
+        if (fwd >= 0 && fwd < 64 && (occ & (1L << fwd)) == 0) {
             moves |= 1L << fwd;
+            // Double push
             if ((color == Color.WHITE && rank == 1) || (color == Color.BLACK && rank == 6)) {
                 int dbl = from + 2 * dir;
                 if ((occ & (1L << dbl)) == 0)
@@ -166,22 +257,24 @@ public class Board {
             }
         }
 
-        for (int off : color == Color.WHITE ? new int[] { 7, 9 } : new int[] { -7, -9 }) {
+        // Captures
+        for (int off : color == Color.WHITE ? new int[]{7, 9} : new int[]{-7, -9}) {
             int to = from + off;
-            if (to >= 0 && to < 64 &&
-                    Math.abs((to % 8) - (from % 8)) == 1 &&
-                    (((enemy | (1L << enPassantSquare)) & (1L << to)) != 0)) {
-                moves |= 1L << to;
+            if (to >= 0 && to < 64 && Math.abs((to % 8) - (from % 8)) == 1) {
+                if (((enemy & (1L << to)) != 0) || to == enPassantSquare) {
+                    moves |= 1L << to;
+                }
             }
         }
 
         return moves;
     }
 
+    
     private long generateKnightMoves(int from) {
         long m = 0;
-        int[] o = { -17, -15, -10, -6, 6, 10, 15, 17 };
-        for (int d : o) {
+        int[] offsets = {-17, -15, -10, -6, 6, 10, 15, 17};
+        for (int d : offsets) {
             int t = from + d;
             if (t >= 0 && t < 64 && Math.abs((from % 8) - (t % 8)) <= 2)
                 m |= 1L << t;
@@ -189,18 +282,11 @@ public class Board {
         return m;
     }
 
-    private long generateBishopMoves(int from, long occ) {
-        return slidingMoves(from, occ, new int[] { -9, -7, 7, 9 });
-    }
-
-    private long generateRookMoves(int from, long occ) {
-        return slidingMoves(from, occ, new int[] { -8, -1, 1, 8 });
-    }
-
+    
     private long generateKingMoves(int from) {
         long m = 0;
-        int[] o = { -9, -8, -7, -1, 1, 7, 8, 9 };
-        for (int d : o) {
+        int[] offsets = {-9, -8, -7, -1, 1, 7, 8, 9};
+        for (int d : offsets) {
             int t = from + d;
             if (t >= 0 && t < 64 && Math.abs((from % 8) - (t % 8)) <= 1)
                 m |= 1L << t;
@@ -208,41 +294,181 @@ public class Board {
         return m;
     }
 
-    private long slidingMoves(int from, long occ, int[] dirs) {
-        long m = 0;
-        for (int d : dirs) {
-            int sq = from;
-            while (true) {
-                int prevFile = sq % 8;
-                sq += d;
-                
-                // Излязъл извън дъската
-                if (sq < 0 || sq >= 64) break;
-                
-                int currFile = sq % 8;
-                
-                // Обвил се (прескочил от един край на друг)
-                if (Math.abs(currFile - prevFile) > 1) break;
-                
-                m |= 1L << sq;
-                if ((occ & (1L << sq)) != 0) break;
-            }
-        }
-        return m;
+    
+    private long generateMoves(int from, Type type) {
+        long occ = allOcc();
+        long friendly = sideToMove == Color.WHITE ? whiteOcc() : blackOcc();
+
+        return switch (type) {
+            case PAWN -> generatePawnMoves(from, sideToMove);
+            case KNIGHT -> generateKnightMoves(from) & ~friendly;
+            case BISHOP -> magicBitboards.getBishopAttacks(from, occ) & ~friendly;
+            case ROOK -> magicBitboards.getRookAttacks(from, occ) & ~friendly;
+            case QUEEN -> (magicBitboards.getBishopAttacks(from, occ)
+                         | magicBitboards.getRookAttacks(from, occ)) & ~friendly;
+            case KING -> generateKingMoves(from) & ~friendly;
+        };
     }
 
+    
+    private boolean isLegalMove(int from, int to, Type pieceType) {
+        long[] bbCopy = bb.clone();
+        int epCopy = enPassantSquare;
+        
+        int pieceIdx = getPieceIndex(pieceType, sideToMove);
+        bb[pieceIdx] &= ~(1L << from);
+        bb[pieceIdx] |= 1L << to;
+        
+        // Handle capture
+        int captureIdx = pieceIndexAt(to);
+        if (captureIdx != -1 && captureIdx != pieceIdx) {
+            bb[captureIdx] &= ~(1L << to);
+        }
+        
+        // Check if king is in check
+        boolean legal = !isInCheck(sideToMove);
+        
+        // Restore state
+        System.arraycopy(bbCopy, 0, bb, 0, 12);
+        enPassantSquare = epCopy;
+        
+        return legal;
+    }
 
+    
+    private boolean canMoveTo(int from, int target, Type type) {
+        long moves = generateMoves(from, type);
+        if ((moves & (1L << target)) == 0) return false;
+        return isLegalMove(from, target, type);
+    }
+
+    
+    public List<Move> generateAllLegalMoves() {
+        List<Move> moves = new ArrayList<>();
+        int startIdx = sideToMove == Color.WHITE ? 0 : 6;
+        
+        for (int pieceIdx = startIdx; pieceIdx < startIdx + 6; pieceIdx++) {
+            long pieces = bb[pieceIdx];
+            Type type = Type.values()[pieceIdx % 6];
+            
+            while (pieces != 0) {
+                int from = Long.numberOfTrailingZeros(pieces);
+                pieces &= pieces - 1; // Clear lowest bit
+                
+                long possibleMoves = generateMoves(from, type);
+                while (possibleMoves != 0) {
+                    int to = Long.numberOfTrailingZeros(possibleMoves);
+                    possibleMoves &= possibleMoves - 1;
+                    
+                    if (isLegalMove(from, to, type)) {
+                        Move move = new Move();
+                        move.piece = new Piece(type, sideToMove);
+                        move.target = to;
+                        move.disambiguation = from;
+                        
+                        // Set flags
+                        if (pieceIndexAt(to) != -1) {
+                            move.flags |= Move.FLAG_CAPTURE;
+                        }
+                        if (type == Type.PAWN && (to / 8 == 0 || to / 8 == 7)) {
+                            move.flags |= Move.FLAG_PROMOTION;
+                        }
+                        if (type == Type.PAWN && to == enPassantSquare) {
+                            move.flags |= Move.FLAG_EN_PASSANT;
+                        }
+                        
+                        moves.add(move);
+                    }
+                }
+            }
+        }
+        
+        // Add castling moves
+        moves.addAll(generateCastlingMoves());
+        
+        return moves;
+    }
+
+    
+    private List<Move> generateCastlingMoves() {
+        List<Move> castles = new ArrayList<>();
+        
+        if (sideToMove == Color.WHITE) {
+            // Kingside castling
+            if ((castlingRights & 0b1000) != 0 && 
+                (allOcc() & 0x0000000000000060L) == 0 &&
+                !isSquareAttacked(4, Color.BLACK) &&
+                !isSquareAttacked(5, Color.BLACK) &&
+                !isSquareAttacked(6, Color.BLACK)) {
+                
+                Move move = new Move();
+                move.piece = new Piece(Type.KING, Color.WHITE);
+                move.flags = Move.FLAG_SHORT_CASTLE;
+                castles.add(move);
+            }
+            
+            // Queenside castling
+            if ((castlingRights & 0b0100) != 0 && 
+                (allOcc() & 0x000000000000000EL) == 0 &&
+                !isSquareAttacked(4, Color.BLACK) &&
+                !isSquareAttacked(3, Color.BLACK) &&
+                !isSquareAttacked(2, Color.BLACK)) {
+                
+                Move move = new Move();
+                move.piece = new Piece(Type.KING, Color.WHITE);
+                move.flags = Move.FLAG_LONG_CASTLE;
+                castles.add(move);
+            }
+        } else {
+            // Black castling
+            if ((castlingRights & 0b0010) != 0 && 
+                (allOcc() & 0x6000000000000000L) == 0 &&
+                !isSquareAttacked(60, Color.WHITE) &&
+                !isSquareAttacked(61, Color.WHITE) &&
+                !isSquareAttacked(62, Color.WHITE)) {
+                
+                Move move = new Move();
+                move.piece = new Piece(Type.KING, Color.BLACK);
+                move.flags = Move.FLAG_SHORT_CASTLE;
+                castles.add(move);
+            }
+            
+            if ((castlingRights & 0b0001) != 0 && 
+                (allOcc() & 0x0E00000000000000L) == 0 &&
+                !isSquareAttacked(60, Color.WHITE) &&
+                !isSquareAttacked(59, Color.WHITE) &&
+                !isSquareAttacked(58, Color.WHITE)) {
+                
+                Move move = new Move();
+                move.piece = new Piece(Type.KING, Color.BLACK);
+                move.flags = Move.FLAG_LONG_CASTLE;
+                castles.add(move);
+            }
+        }
+        
+        return castles;
+    }
+
+    
+    public boolean isCheckmate() {
+        return isInCheck(sideToMove) && generateAllLegalMoves().isEmpty();
+    }
+
+    
+    public boolean isStalemate() {
+        return !isInCheck(sideToMove) && generateAllLegalMoves().isEmpty();
+    }
+
+    
     public void move(String input) throws IllegalMoveException {
         input = input.trim();
 
-        // Проверка за координатна нотация (e2 e4)
         if (input.matches("[a-h][1-8]\\s+[a-h][1-8]")) {
             String[] parts = input.split("\\s+");
             move(parts[0], parts[1]);
             return;
         }
 
-        // SAN нотация
         Parser parser = new Parser();
         Move move = parser.parseSingleMove(input, sideToMove);
         resolveAndMakeMove(move);
@@ -250,13 +476,8 @@ public class Board {
 
     
     public void move(String from, String to) throws IllegalMoveException {
-        saveState(); // Запазваме състоянието преди хода
-
         int fromIdx = sqIdx(from);
         int toIdx = sqIdx(to);
-
-        lastMoveFrom = fromIdx;
-        lastMoveTo = toIdx;
 
         Piece piece = getPieceAt(fromIdx);
         if (piece == null) {
@@ -272,10 +493,9 @@ public class Board {
 
         Move move = new Move();
         move.piece = piece;
-        move.target = (byte) toIdx;
+        move.target = toIdx;
         move.disambiguation = fromIdx;
 
-        // Проверка за специални ходове
         if (piece.type() == Type.PAWN) {
             int targetRank = toIdx / 8;
             if (targetRank == 7 || targetRank == 0) {
@@ -286,24 +506,38 @@ public class Board {
             }
         }
 
+        if (pieceIndexAt(toIdx) != -1) {
+            move.flags |= Move.FLAG_CAPTURE;
+        }
+
+        saveState();
+        lastMoveFrom = fromIdx;
+        lastMoveTo = toIdx;
         makeMove(move);
+        
+        // Check for check/mate
+        if (isInCheck(sideToMove)) {
+            move.flags |= Move.FLAG_CHECK;
+            if (isCheckmate()) {
+                move.flags |= Move.FLAG_MATE;
+            }
+        }
     }
 
     
     public void resolveAndMakeMove(Move move) throws IllegalMoveException {
-        saveState(); // Запазваме състоянието преди хода
-
-        // Рокада
         if ((move.flags & Move.FLAG_SHORT_CASTLE) != 0 ||
-                (move.flags & Move.FLAG_LONG_CASTLE) != 0) {
-            // За рокада, запомняме позициите
+            (move.flags & Move.FLAG_LONG_CASTLE) != 0) {
+            
             if (sideToMove == Color.WHITE) {
-                lastMoveFrom = 4; // e1
-                lastMoveTo = (move.flags & Move.FLAG_SHORT_CASTLE) != 0 ? 6 : 2; // g1 или c1
+                lastMoveFrom = 4;
+                lastMoveTo = (move.flags & Move.FLAG_SHORT_CASTLE) != 0 ? 6 : 2;
             } else {
-                lastMoveFrom = 60; // e8
-                lastMoveTo = (move.flags & Move.FLAG_SHORT_CASTLE) != 0 ? 62 : 58; // g8 или c8
+                lastMoveFrom = 60;
+                lastMoveTo = (move.flags & Move.FLAG_SHORT_CASTLE) != 0 ? 62 : 58;
             }
+            
+            saveState();
             makeMove(move);
             return;
         }
@@ -315,7 +549,6 @@ public class Board {
         List<Integer> candidates = new ArrayList<>();
         long pieceBitboard = bb[pieceIdx];
 
-        // Намери всички фигури от този тип
         for (int sq = 0; sq < 64; sq++) {
             if ((pieceBitboard & (1L << sq)) != 0) {
                 if (canMoveTo(sq, target, pieceType)) {
@@ -328,13 +561,10 @@ public class Board {
             throw new IllegalMoveException("No piece can reach " + squareToString(target));
         }
 
-        // Филтрирай по disambiguation
         if (move.disambiguation >= 0 && move.disambiguation < 8) {
-            // File disambiguation (a-h)
             int file = move.disambiguation;
             candidates.removeIf(sq -> sq % 8 != file);
         } else if (move.disambiguation >= 8 && move.disambiguation < 16) {
-            // Rank disambiguation (1-8)
             int rank = move.disambiguation - 8;
             candidates.removeIf(sq -> sq / 8 != rank);
         }
@@ -346,19 +576,26 @@ public class Board {
         int fromSquare = candidates.get(0);
         move.disambiguation = fromSquare;
 
-        // Запомняме позициите
+        saveState();
         lastMoveFrom = fromSquare;
         lastMoveTo = target;
-
         makeMove(move);
-    }
-
-    private String squareToString(int sq) {
-        return "" + (char) ('a' + sq % 8) + (char) ('1' + sq / 8);
+        
+        // Check for check/mate
+        if (isInCheck(sideToMove)) {
+            move.flags |= Move.FLAG_CHECK;
+            if (isCheckmate()) {
+                move.flags |= Move.FLAG_MATE;
+            }
+        }
     }
 
     
+    private String squareToString(int sq) {
+        return "" + (char)('a' + sq % 8) + (char)('1' + sq / 8);
+    }
 
+    
     public void makeMove(Move move) {
         int from = move.disambiguation;
         int to = move.target & 0xFF;
@@ -375,11 +612,29 @@ public class Board {
             return;
         }
 
+        // Update castling rights when king or rook moves
+        if (move.piece.type() == Type.KING) {
+            if (sideToMove == Color.WHITE) {
+                castlingRights &= 0b0011;
+            } else {
+                castlingRights &= 0b1100;
+            }
+        }
+        if (move.piece.type() == Type.ROOK) {
+            if (sideToMove == Color.WHITE) {
+                if (from == 0) castlingRights &= ~0b0100;
+                if (from == 7) castlingRights &= ~0b1000;
+            } else {
+                if (from == 56) castlingRights &= ~0b0001;
+                if (from == 63) castlingRights &= ~0b0010;
+            }
+        }
+
         bb[pieceIdx] &= ~(1L << from);
 
         if ((move.flags & Move.FLAG_EN_PASSANT) != 0) {
             int cap = sideToMove == Color.WHITE ? to - 8 : to + 8;
-            Piece capturedPiece = new Piece(Type.PAWN, sideToMove == Color.WHITE ? Color.BLACK : Color.WHITE);
+            Piece capturedPiece = new Piece(Type.PAWN, sideToMove.opposite());
             if (sideToMove == Color.WHITE) {
                 capturedByWhite.add(capturedPiece);
             } else {
@@ -396,6 +651,17 @@ public class Board {
                     capturedByBlack.add(capturedPiece);
                 }
                 bb[capIdx] &= ~(1L << to);
+                
+                // Update castling rights when rook is captured
+                if (capturedPiece.type() == Type.ROOK) {
+                    if (capturedPiece.color() == Color.WHITE) {
+                        if (to == 0) castlingRights &= ~0b0100;
+                        if (to == 7) castlingRights &= ~0b1000;
+                    } else {
+                        if (to == 56) castlingRights &= ~0b0001;
+                        if (to == 63) castlingRights &= ~0b0010;
+                    }
+                }
             }
         }
 
@@ -405,39 +671,46 @@ public class Board {
             bb[pieceIdx] |= 1L << to;
         }
 
-        enPassantSquare = (move.piece.type() == Type.PAWN && Math.abs(to - from) == 16)
-                ? (sideToMove == Color.WHITE ? from + 8 : from - 8)
-                : -1;
+        // Set en passant square if pawn double push
+        if (move.piece.type() == Type.PAWN && Math.abs(to - from) == 16) {
+            enPassantSquare = (from + to) / 2;
+        } else {
+            enPassantSquare = -1;
+        }
 
         sideToMove = sideToMove.opposite();
     }
 
+    
     private void executeCastling(boolean kingside) {
         if (sideToMove == Color.WHITE) {
             if (kingside) {
-                bb[WK] = 0x0000000000000040L; // g1
-                bb[WR] &= ~0x0000000000000080L; // clear h1
-                bb[WR] |= 0x0000000000000020L; // f1
+                bb[WK] = 0x0000000000000040L;
+                bb[WR] &= ~0x0000000000000080L;
+                bb[WR] |= 0x0000000000000020L;
+                castlingRights &= 0b0011;
             } else {
-                bb[WK] = 0x0000000000000004L; // c1
-                bb[WR] &= ~0x0000000000000001L; // clear a1
-                bb[WR] |= 0x0000000000000008L; // d1
+                bb[WK] = 0x0000000000000004L;
+                bb[WR] &= ~0x0000000000000001L;
+                bb[WR] |= 0x0000000000000008L;
+                castlingRights &= 0b0011;
             }
         } else {
             if (kingside) {
-                bb[BK] = 0x4000000000000000L; // g8
-                bb[BR] &= ~0x8000000000000000L; // clear h8
-                bb[BR] |= 0x2000000000000000L; // f8
+                bb[BK] = 0x4000000000000000L;
+                bb[BR] &= ~0x8000000000000000L;
+                bb[BR] |= 0x2000000000000000L;
+                castlingRights &= 0b1100;
             } else {
-                bb[BK] = 0x0400000000000000L; // c8
-                bb[BR] &= ~0x0100000000000000L; // clear a8
-                bb[BR] |= 0x0800000000000000L; // d8
+                bb[BK] = 0x0400000000000000L;
+                bb[BR] &= ~0x0100000000000000L;
+                bb[BR] |= 0x0800000000000000L;
+                castlingRights &= 0b1100;
             }
         }
     }
 
     
-
     public void display() {
         for (int r = 7; r >= 0; r--) {
             for (int f = 0; f < 8; f++) {
@@ -446,23 +719,62 @@ public class Board {
             }
             System.out.println();
         }
+        
+        if (isInCheck(sideToMove)) {
+            System.out.println(sideToMove + " is in check!");
+        }
+        if (isCheckmate()) {
+            System.out.println("Checkmate! " + sideToMove.opposite() + " wins!");
+        }
+        if (isStalemate()) {
+            System.out.println("Stalemate!");
+        }
+    }
+    
+    
+    public GameStatus getGameStatus() {
+        if (isCheckmate()) {
+            return GameStatus.CHECKMATE;
+        }
+        if (isStalemate()) {
+            return GameStatus.STALEMATE;
+        }
+        if (isInCheck(sideToMove)) {
+            return GameStatus.CHECK;
+        }
+        return GameStatus.ONGOING;
+    }
+    
+    
+    public enum GameStatus {
+        ONGOING,
+        CHECK,
+        CHECKMATE, 
+        STALEMATE
     }
 
+    
     public class IllegalMoveException extends Exception {
-        public IllegalMoveException(String message) {
-            super(message);
-        }
+        public IllegalMoveException(String message) { super(message); }
     }
 
     
     private static class BoardState {
+        
         long[] bb;
+        
         Color sideToMove;
+        
         int enPassantSquare;
-        boolean wkCastle, wqCastle, bkCastle, bqCastle;
+        
+        int castlingRights;
+        
         int lastMoveFrom;
+        
         int lastMoveTo;
+        
         List<Piece> capturedByWhite;
+        
         List<Piece> capturedByBlack;
     }
 }

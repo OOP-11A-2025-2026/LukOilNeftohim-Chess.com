@@ -6,6 +6,7 @@ import model.*;
 
 public class Parser {
 
+    
     public Game parseGame(String text) {
         Game game = new Game();
 
@@ -20,6 +21,7 @@ public class Parser {
         return game;
     }
 
+    
     public Move parseSingleMove(String token, Color color) {
         token = token.trim();
         if (token.isEmpty()) {
@@ -27,6 +29,7 @@ public class Parser {
         }
         return parseMove(token, color);
     }
+    
     
     private Map<String, String> parseTags(String text) {
         Map<String, String> tags = new HashMap<>();
@@ -42,7 +45,6 @@ public class Parser {
     }
 
     
-
     private List<Move> parseMoves(String text) {
         List<Move> moves = new ArrayList<>();
 
@@ -63,6 +65,7 @@ public class Parser {
         return moves;
     }
 
+    
     private Move parseMove(String token, Color color) {
         Move move = new Move();
         move.disambiguation = -1;
@@ -82,10 +85,12 @@ public class Parser {
         return move;
     }
 
+    
     private boolean isResult(String token) {
         return token.equals("1-0") || token.equals("0-1") || token.equals("1/2-1/2") || token.equals("*");
     }
 
+    
     private boolean parseCastling(Move move, String token) {
         switch (token.replaceAll("[+#]", "")) {
             case "O-O" -> {
@@ -102,6 +107,7 @@ public class Parser {
         }
     }
 
+    
     private String parseCheckOrMate(Move move, String token) {
         if (token.isEmpty()) return token;
         
@@ -122,6 +128,7 @@ public class Parser {
         }
     }
 
+    
     private String parsePromotion(Move move, String token, Color color) {
         int idx = token.indexOf('=');
         if (idx == -1) return token;
@@ -144,6 +151,7 @@ public class Parser {
         return token.substring(0, idx);
     }
 
+    
     private String parseTarget(Move move, String token) {
         if (token.length() < 2) {
             throw new IllegalArgumentException("Invalid move: " + token);
@@ -163,6 +171,7 @@ public class Parser {
         return token.substring(0, len - 2);
     }
 
+    
     private String parseCapture(Move move, String token) {
         if (!token.contains("x")) return token;
 
@@ -170,6 +179,7 @@ public class Parser {
         return token.replace("x", "");
     }
 
+    
     private String parseDisambiguation(Move move, String token) {
         if (token.isEmpty()) return token;
 
@@ -188,6 +198,7 @@ public class Parser {
         return token;
     }
 
+    
     private void parsePiece(Move move, String token, Color color) {
         char first = token.isEmpty() ? ' ' : token.charAt(0);
 
