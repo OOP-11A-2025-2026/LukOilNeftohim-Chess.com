@@ -288,7 +288,7 @@ public class CLI {
             System.out.print((rank + 1) + " ");
             for (int file = 0; file < 8; file++) {
                 int square = rank * 8 + file;
-                boolean isLightSquare = (rank + file) % 2 == 0;
+                boolean isLightSquare = (rank + file) % 2 == 1;
                 
                 boolean isFromSquare = square == board.lastMoveFrom;
                 boolean isToSquare = square == board.lastMoveTo;
