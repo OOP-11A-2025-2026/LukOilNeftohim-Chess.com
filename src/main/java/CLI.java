@@ -137,7 +137,7 @@ public class CLI {
                 handleResign();
                 break;
             } else if (input.equalsIgnoreCase("draw")) {
-                handleDraw();
+                errorMessage = handleDrawOffer();
                 if (!gameActive) break;
             } else if (input.equalsIgnoreCase("undo")) {
                 if (board.canUndo()) {
@@ -197,6 +197,28 @@ public class CLI {
         if (timer != null) timer.shutdown();
 
         gameActive = false;
+    }
+    
+    private static String handleDrawOffer() {
+        Color offeringPlayer = board.sideToMove;
+        Color respondingPlayer = offeringPlayer.opposite();
+        
+        System.out.println(Ansi.ansi().fg(Ansi.Color.CYAN).a(offeringPlayer + " offers a draw.").reset());
+        System.out.print(Ansi.ansi().bold().a(respondingPlayer + ", do you accept the draw? (yes/no): ").reset());
+        
+        String response = scanner.nextLine().trim().toLowerCase();
+        
+        if (response.equals("yes") || response.equals("y")) {
+            System.out.println("Draw accepted! The game ended in a draw.");
+            game.getTags().put("Result", "1/2-1/2");
+            
+            if (timer != null) timer.shutdown();
+            
+            gameActive = false;
+            return null;
+        } else {
+            return "Draw offer rejected. Game continues.";
+        }
     }
     
     private static void saveGame() {
