@@ -25,6 +25,3 @@ replay_pid*
 
 # VS Code 
 .vscode/
-
-# Maven
-build/target/
