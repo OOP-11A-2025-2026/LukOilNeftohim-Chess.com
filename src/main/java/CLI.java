@@ -162,6 +162,26 @@ public class CLI {
         try {
             game.addMove(input);
             
+            // Check for checkmate
+            if (board.isCheckmate()) {
+                String loser = board.sideToMove == Color.WHITE ? "White" : "Black";
+                String winner = board.sideToMove == Color.WHITE ? "Black" : "White";
+                System.out.println(Ansi.ansi().fg(Ansi.Color.GREEN).bold().a("\nCheckmate! " + winner + " wins!").reset());
+                game.getTags().put("Result", board.sideToMove == Color.WHITE ? "0-1" : "1-0");
+                gameActive = false;
+                if (timer != null) timer.shutdown();
+                return null;
+            }
+            
+            // Check for stalemate
+            if (board.isStalemate()) {
+                System.out.println(Ansi.ansi().fg(Ansi.Color.CYAN).bold().a("\nStalemate! The game is drawn.").reset());
+                game.getTags().put("Result", "1/2-1/2");
+                gameActive = false;
+                if (timer != null) timer.shutdown();
+                return null;
+            }
+            
             if (timer != null) {
                 timer.stopTimer();
                 timer.switchPlayer();

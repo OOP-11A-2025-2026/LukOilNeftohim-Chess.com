@@ -325,6 +325,13 @@ public class Board {
             bb[captureIdx] &= ~(1L << to);
         }
         
+        // Handle en passant capture
+        if (pieceType == Type.PAWN && to == enPassantSquare) {
+            int epCaptureSquare = sideToMove == Color.WHITE ? to - 8 : to + 8;
+            int epCaptureIdx = sideToMove == Color.WHITE ? BP : WP;
+            bb[epCaptureIdx] &= ~(1L << epCaptureSquare);
+        }
+        
         // Check if king is in check
         boolean legal = !isInCheck(sideToMove);
         
@@ -501,7 +508,7 @@ public class Board {
             if (targetRank == 7 || targetRank == 0) {
                 move.flags |= Move.FLAG_PROMOTION;
             }
-            if (Math.abs(fromIdx % 8 - toIdx % 8) == 1 && getPieceAt(toIdx) == null) {
+            if (Math.abs(fromIdx % 8 - toIdx % 8) == 1 && getPieceAt(toIdx) == null && toIdx == enPassantSquare) {
                 move.flags |= Move.FLAG_EN_PASSANT;
             }
         }
@@ -575,6 +582,12 @@ public class Board {
 
         int fromSquare = candidates.get(0);
         move.disambiguation = fromSquare;
+
+        // Check if this is an en passant move
+        if (pieceType == Type.PAWN && Math.abs(fromSquare % 8 - target % 8) == 1 && 
+            getPieceAt(target) == null && target == enPassantSquare) {
+            move.flags |= Move.FLAG_EN_PASSANT;
+        }
 
         saveState();
         lastMoveFrom = fromSquare;
