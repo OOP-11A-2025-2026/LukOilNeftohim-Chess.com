@@ -1,18 +1,18 @@
 services:
   neftomate:
-    image: lukoilneftohim/chess:latest
-    build:
-      context: ../..   # Docker context е коренът на проекта
-      dockerfile: build/docker/Dockerfile
-      network: host  
-
+    image: maven:3.9.1-eclipse-temurin-17
     container_name: chess
+
+    working_dir: /app
+
+    command: mvn compile exec:java
+
+    volumes:
+      - ../..:/app
+      - neftomate_m2:/root/.m2
 
     stdin_open: true
     tty: true
 
-    volumes:
-      - neftomate_saves:/app/saves
-
 volumes:
-  neftomate_saves:
+  neftomate_m2:

@@ -13,8 +13,11 @@ public class CLI {
     private static boolean gameActive;
     private static Timer timer;
 
-    static Ansi.Color whitePiece = Ansi.Color.WHITE; 
-    static Ansi.Color blackPiece = Ansi.Color.BLACK; 
+    static int whiteR = 255;
+    static int whiteG = 255;
+    static int whiteB = 255;
+
+    static Ansi.Color blackPiece = Ansi.Color.BLACK;
 
     public static void main(String[] args) {
         AnsiConsole.systemInstall();
@@ -322,8 +325,8 @@ public class CLI {
                     g = 180;
                     b = 80;
                 } else if (isLightSquare) {
-                    r = 200;
-                    g = 190;
+                    r = 180;
+                    g = 180;
                     b = 180;
                 } else {
                     r = 90;
@@ -333,9 +336,17 @@ public class CLI {
                 
                 Piece piece = board.getPieceAt(square);
                 String pieceChar = getPieceUnicode(piece);
-                Ansi.Color fgColor = (piece != null && piece.color() == Color.WHITE) ? whitePiece : blackPiece;
+                boolean isWhite = piece != null && piece.color() == Color.WHITE;
 
-                System.out.print(Ansi.ansi().bgRgb(r, g, b).fg(fgColor).bold().a(" " + pieceChar + " ").boldOff().reset());
+                if (piece != null) {
+                    if (isWhite) {
+                        System.out.print(Ansi.ansi().bgRgb(r, g, b).fgRgb(whiteR, whiteG, whiteB).bold().a(" " + pieceChar + " ").boldOff().reset());
+                    } else {
+                        System.out.print(Ansi.ansi().bgRgb(r, g, b).fg(blackPiece).bold().a(" " + pieceChar + " ").boldOff().reset());
+                    }
+                } else {
+                    System.out.print(Ansi.ansi().bgRgb(r, g, b).a("   ").reset());
+                }
             }
             System.out.println(" " + (rank + 1));
         }

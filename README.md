@@ -47,7 +47,8 @@ mvn exec:java
 
 ```bash
 cd build/docker
-docker compose run neftomate
+alias dcr='docker compose run --rm'
+dcr neftomate
 ```
 
 ---

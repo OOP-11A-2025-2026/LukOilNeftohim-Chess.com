@@ -9,7 +9,9 @@ RUN mvn clean package shade:shade
 
 FROM eclipse-temurin:17-jre
 
-RUN set -g default-terminal "tmux-256color" && set -as terminal-overrides ",xterm-256color:Tc"
+ENV TERM=xterm-256color
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 WORKDIR /app
 
