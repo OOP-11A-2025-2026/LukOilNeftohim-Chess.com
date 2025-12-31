@@ -14,4 +14,42 @@ public class Move{
     public int disambiguation; 
     
     public Move() {};
+
+    @Override
+    public String toString() {
+
+        if ((flags & FLAG_SHORT_CASTLE) != 0) return "O-O";
+        if ((flags & FLAG_LONG_CASTLE) != 0)  return "O-O-O";
+
+        StringBuilder sb = new StringBuilder();
+
+        if (piece.type() != Type.PAWN) {
+            sb.append(piece.toString().charAt(0));
+        }
+
+        if ((flags & FLAG_CAPTURE) != 0) {
+            if (piece.type() == Type.PAWN) {
+                sb.append((char)('a' + (disambiguation % 8)));
+            }
+            sb.append("x");
+        }
+
+        sb.append(indexToSquare(target));
+
+        if ((flags & FLAG_PROMOTION) != 0) {
+            sb.append("=");
+            sb.append(piece.toString().charAt(0));
+        }
+
+        if ((flags & FLAG_CHECK) != 0) sb.append("+");
+        if ((flags & FLAG_MATE) != 0)  sb.append("#");
+
+        return sb.toString();
+    }
+
+    private String indexToSquare(int index) {
+        int file = index % 8;
+        int rank = index / 8;
+        return "" + (char)('a' + file) + (rank + 1);
+    }
 }

@@ -160,7 +160,7 @@ public class CLI {
 
     private static String processMove(String input) {
         try {
-            board.move(input);
+            game.addMove(input);
             
             if (timer != null) {
                 timer.stopTimer();
@@ -169,8 +169,6 @@ public class CLI {
             }
             
             return null; 
-        } catch (Board.IllegalMoveException e) {
-            return e.getMessage();
         } catch (Exception e) {
             return e.getMessage();
         }

@@ -16,4 +16,16 @@ public class Game {
     public Board getBoard() { return board; }
     public List<Move> getMoves() { return moves; }
     public Map<String, String> getTags() { return tags; }
+
+    public void addMove(String input) throws Board.IllegalMoveException {
+        board.move(input);
+
+        Move last = new Move();
+        last.piece = board.getPieceAt(board.lastMoveTo);
+        last.target = board.lastMoveTo;
+        last.disambiguation = board.lastMoveFrom;
+        last.flags = 0;
+
+        moves.add(last);
+    }
 }
