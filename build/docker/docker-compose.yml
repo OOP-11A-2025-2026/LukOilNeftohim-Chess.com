@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   neftomate:
     image: lukoilneftohim/chess:latest

@@ -9,8 +9,10 @@ RUN mvn clean package shade:shade
 
 FROM eclipse-temurin:17-jre
 
+RUN set -g default-terminal "tmux-256color" && set -as terminal-overrides ",xterm-256color:Tc"
+
 WORKDIR /app
 
-COPY --from=build /app/target/chess.jar chess.jar
+COPY --from=build /app/build/target/chess.jar chess.jar
 
 ENTRYPOINT ["java", "-jar", "chess.jar"]
